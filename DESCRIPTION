@@ -1,0 +1,13 @@
+Package: lazymcmc
+Title: MCMC for the lazy
+Version: 1.0.0
+Author: jameshay218
+Maintainer: jameshay218 <jameshay218@gmail.com>
+Description: A package for very generic MCMC in R. Using either univariate uniform or multivariate gaussian proposals, explores the posterior distribution for an arbritary set of model parameters specified in R. The focus is to allow an intuitive, flexible interface rather than fancy on fancy optimisations and syntax.
+License: GPL-3
+LazyData: true
+URL: https://github.com/jameshay218/lazymcmc
+BugReports: https://github.com/jameshay218/lazymcmc/issues
+RoxygenNote: 5.0.1
+Suggests: 
+    testthat
