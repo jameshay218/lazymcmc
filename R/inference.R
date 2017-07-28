@@ -6,7 +6,6 @@
 #' @param covMat the 2D covariance matrix for all of the parameters
 #' @return a parameter vector of a proposed move. Note that these may fall outside the allowable ranges.
 #' @export
-#' @useDynLib lazymcmc
 mvr_proposal <- function(values, fixed, covMat){
     proposed <- values
     proposed[fixed] <- MASS::mvrnorm(n=1,mu=proposed[fixed],Sigma=(5.6644/length(fixed))*covMat)
@@ -23,7 +22,6 @@ mvr_proposal <- function(values, fixed, covMat){
 #' @param index numeric value for the index of the parameter to be moved from the param table and vector
 #' @return the parameter vector after step
 #' @export
-#' @useDynLib lazymcmc
 univ_proposal <- function(values, lower_bounds, upper_bounds,steps, index){
     mn <- lower_bounds[index]
     mx <- upper_bounds[index]
@@ -61,7 +59,6 @@ univ_proposal <- function(values, lower_bounds, upper_bounds,steps, index){
 #' @param pcur the current acceptance rate
 #' @return the scaled step size
 #' @export
-#' @useDynLib lazymcmc
 scaletuning <- function(step, popt,pcur){
     if(pcur ==1) pcur <- 0.99
     if(pcur == 0) pcur <- 0.01
@@ -77,7 +74,6 @@ scaletuning <- function(step, popt,pcur){
 #' @param f the function to be protected
 #' @return the protected function
 #' @export
-#' @useDynLib lazymcmc
 protect <- function(f){
     function(...){
         tryCatch(f(...),error=function(e){
@@ -100,4 +96,11 @@ get_best_pars <- function(chain){
                                  2:(ncol(chain) - 1)])
     names(bestPars) <- tmpNames
     return(bestPars)
+}
+
+toUnitScale <- function(x, min, max){
+    return((x-min)/(max-min))
+}
+fromUnitScale <- function(x,min,max){
+    return(min + (max-min)*x)
 }

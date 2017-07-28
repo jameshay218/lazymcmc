@@ -4,8 +4,7 @@
 #' @param parTab the parameter table controlling information such as bounds, initial values etc
 #' @return a list of strings with the errors of the parameter table
 #' @export
-#' useDynLib lazymcmc
-parameter_table_check <- function(parTab){
+param_table_check <- function(parTab){
     needed_names <- c("values","fixed","steps","lower_bound","upper_bound")
     errors <- FALSE
 
@@ -52,9 +51,8 @@ parameter_table_check <- function(parTab){
         fixed_error <- "Error in fixed parameters - all parameters fixed!"
         errors <- list(errors, fixed_error)
     }
-    
-    if(length(errors > 1)) errors[[1]] <- TRUE
-    
+    if(length(errors) > 1) errors[[1]] <- TRUE
+
     return(errors)
     
 }
@@ -68,7 +66,7 @@ parameter_table_check <- function(parTab){
 #' @return a list of errors
 #' @export
 mcmc_param_check <- function(mcmcPars, mvrPars){
-    needed_names <- c("values","fixed","steps","lower_bound","upper_bound")
+    needed_names <- c("iterations","popt","opt_freq","adaptive_period","save_block")
     errors <- FALSE
     if(!(any(needed_names %in% names(mcmcPars)))){
         names_error <- paste0("Error in mcmcPars - missing ",
@@ -90,6 +88,6 @@ mcmc_param_check <- function(mcmcPars, mvrPars){
             errors <- list(errors, "Error in mvrPars - list should have 3 elements")
         }
     }
-    if(length(errors > 1)) errors[[1]] <- TRUE
+    if(length(errors) > 1) errors[[1]] <- TRUE
     return(errors)
 }

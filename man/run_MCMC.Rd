@@ -17,7 +17,7 @@ run_MCMC(parTab, data = NULL, mcmcPars, filename,
 
 \item{filename}{the full filepath at which the MCMC chain should be saved. "_chain.csv" will be appended to the end of this, so filename should have no file extensions}
 
-\item{CREATE_POSTERIOR_FUNC}{pointer to posterior function used to calculate a likelihood}
+\item{CREATE_POSTERIOR_FUNC}{pointer to posterior function creator used to calculate a likelihood. See the main example - this should return your likelihood function (that only takes a single vector of parameters as an argument).}
 
 \item{mvrPars}{a list of parameters if using a multivariate proposal. Must contain an initial covariance matrix, weighting for adapting cov matrix, and an initial scaling parameter (0-1)}
 

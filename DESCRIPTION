@@ -12,5 +12,8 @@ RoxygenNote: 5.0.1
 Suggests: 
     testthat,
     MASS,
-    coda
+    coda,
+    rmarkdown,
+    knitr
+VignetteBuilder: knitr
 	

@@ -5,13 +5,12 @@
 #' @param data the data frame of data to be fitted
 #' @param mcmcPars named vector named vector with parameters for the MCMC procedure. iterations, popt, opt_freq, thin, burnin, adaptive_period and save_block.
 #' @param filename the full filepath at which the MCMC chain should be saved. "_chain.csv" will be appended to the end of this, so filename should have no file extensions
-#' @param CREATE_POSTERIOR_FUNC pointer to posterior function used to calculate a likelihood
+#' @param CREATE_POSTERIOR_FUNC pointer to posterior function creator used to calculate a likelihood. See the main example - this should return your likelihood function (that only takes a single vector of parameters as an argument).
 #' @param mvrPars a list of parameters if using a multivariate proposal. Must contain an initial covariance matrix, weighting for adapting cov matrix, and an initial scaling parameter (0-1)
 #' @param PRIOR_FUNC user function of prior for model parameters. Should take values, names and local from param_table
 #' @param OPT_TUNING constant used to indicate what proportion of the adaptive period should be used to build the covariance matrix, if needed
 #' @return a list with: 1) full file path at which the MCMC chain is saved as a .csv file; 2) the last used covariance matrix; 3) the last used scale size
 #' @export
-#' @useDynLib lazymcmc
 run_MCMC <- function(parTab,
                      data=NULL,
                      mcmcPars,
@@ -22,9 +21,9 @@ run_MCMC <- function(parTab,
                      OPT_TUNING=0.2,
                      ...){
     ## check that input parameters are correctly formatted
-    parTab_check <- param_table_check(parTab)
+    parTab_check <- lazymcmc::param_table_check(parTab)
     if(parTab_check[[1]] == TRUE) return(parTab_check[[2]])
-    mcmcPar_check <- mcmc_param_check(mcmcPars, mvrPars)
+    mcmcPar_check <- lazymcmc::mcmc_param_check(mcmcPars, mvrPars)
     if(mcmcPar_check[[1]] == TRUE) return(mcmcPar_check[[2]])
 
     ## Allowable error in scale tuning
@@ -129,7 +128,6 @@ run_MCMC <- function(parTab,
             par_i <- par_i + 1
             if(par_i > unfixed_par_length) par_i <- 1
             proposal <- univ_proposal(current_pars, lower_bounds, upper_bounds, steps,j)
-            #print(proposal)
             tempiter[j] <- tempiter[j] + 1
             ## If using multivariate proposals
         } else {
