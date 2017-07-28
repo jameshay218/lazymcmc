@@ -1,26 +1,9 @@
----
-title: "SIR model fitting example"
-output: rmarkdown::html_vignette
-author: "James Hay"
-date: "27 July 2017"
-vignette: >
-  %\VignetteIndexEntry{Put the title of your vignette here}
-  %\VignetteEngine{knitr::rmarkdown}
-  \usepackage[utf8]{inputenc}
----
-
-```{r setup, include=FALSE}
+## ----setup, include=FALSE------------------------------------------------
 library(lazymcmc)
 knitr::opts_chunk$set(echo = TRUE, fig.width=7,fig.height=6,
                       message=FALSE, results=FALSE,warning=FALSE)
-```
 
-## Foreword
-This vignette is intended to show users how to fit an SIR model (ie. estimate parameter values) to some artificial data. Once you've understood this, it should be fairly straightforward to write your own generic model and fit to it. There are some *tips* at the bottom of this vignette to anticipate potential questions.
-
-## The SIR model
-The first step is to specify our really simple SIR model. See [here](http://mathworld.wolfram.com/SIRModel.html), or any other reference for a summary. In particular, we'll implement the [Kermack-McKendrick Model](http://mathworld.wolfram.com/Kermack-McKendrickModel.html). We'll ignore vital dynamics so that all we have to worry about is infections and recoveries. The key here is that the SIR model is defined by a set of nonlinear ordinary differential equations, so we need to numerically solve these.
-```{r SIR}
+## ----SIR-----------------------------------------------------------------
 ## Define the set of ODEs for the model. Return such that we can solve with deSolve
 SIR_odes <- function(t, x, params) {
     S <- x[1]
@@ -60,17 +43,8 @@ legend("topright", title="Key",
        legend=c("Susceptible","Infected","Recovered"),
        col=c("green","red","blue"),
        lty=c(1,1,1))
-```
 
-## Artificial data
-Let's pretend that this model generated some real data that was observed, so we need to move to real numbers rather than per capita. Let's say it's a population of 1000 people, and 1 person was infected. 
-
-Of course, there was some noise introduced when observing the data, and only infected people came into the healthcare system to be observed. 
-We could use the "Infected" column directly, but this is actually a measure of disease prevalence. Incidence makes more sense, as we observe individuals when they become ill (with some reporting delay which we'll ignore). 
-
-Our observed data will therefore be the cumulative difference of the susceptible column. Let's also assume that we observe the total incidence every 7 days, and that the observations are drawn from a poisson distribution where the mean is the true incidence. Our artificial data is generated as:
-
-```{r data_generation}
+## ----data_generation-----------------------------------------------------
 ## Starting population size
 S0 <- 999
 I0 <- 1
@@ -102,12 +76,8 @@ plot(real_data,type='l',col="red",
      xlab="Time (days)", ylab="Number of new infected people",
      main="Observed weekly incidence")
 
-```
 
-## Likelihood function
-Now that we have our data generating process, model, and assumptions about the error, we can write a likelihood function. The basic idea is that we assume the model generates the true incidence, and we make an observation from this with some error ie. the poisson distribution. The likelihood function alongside the model solver can be written as:
-
-```{r likelihood}
+## ----likelihood----------------------------------------------------------
 dat <- real_data
 ## Note that S0, I0, R0, t and SIR_odes are declared outside of
 ## this function, but are still accessible in the wider R
@@ -130,17 +100,8 @@ real_pars <- c(beta,gamma)
 
 ## Likelihood of true pars
 print(likelihood_func(real_pars))
-```
 
-## lazymcmc
-We now have everything we need to run the MCMC and reestimate the parameters of the SIR model conditional on the observed data. 
-
-We need to make some changes to make parameter exploration a bit easier. This is where some more complicated packages might help you - lazymcmc leaves more to the user.
-
-Firstly, let's work in the parameter space of `R0` and `gamma` rather than `beta` and `gamma`. The reason being is that `deSolve` struggles with SIR models for silly values of `R0`, which is difficult to manage if we are working with `beta`. This way, we can bound `R0` from below at 1 (and above by something reasonable, say 10 here). We'll make some pretty strong assumptions about the limits for gamma as well, just to get the ball rolling here. Let's assume that our prior on gamma is that recovery time is somewhere between 1 and `Inf` days.
-
-The only thing we haven't looked at for `lazymcmc` is the `parTab` setup, which is straightforward. We just need columns for the parameter starting values, names, whether they are fixed or to be fitted, initial proposal step size, lower and upper bounds.
-```{r lazymcmc, results='hide'}
+## ----lazymcmc, results='hide'--------------------------------------------
 parTab <- data.frame(names=c("R0","gamma"),
                      values=c(1.5,0.2),
                      fixed=c(0,0),
@@ -204,16 +165,11 @@ output <- run_MCMC(parTab=startTab, data=dat, mcmcPars=mcmcPars, filename="SIR_f
                    S0=999,I0=1,R0=0,SIR_odes=SIR_odes)
 chain <- read.csv(output$file)
 plot(coda::as.mcmc(chain[,c("R0","gamma")]))
-```
-We've restimated our original `R0` and `gamma`, great! Convergence isn't amazing yet. Because `R0` as a term contains `gamma`, there is probably some correlation which makes a univariate sampler quite inefficient:
 
-```{r correlation}
+## ----correlation---------------------------------------------------------
 plot(chain$R0~chain$gamma)
-```
 
-A sampler that takes covariance into account is going to be more efficient here. Let's add a simple prior function as well, just to show how it works. Let's run the chain again using the multivariate sampler this time:
-
-```{r multivariate, results='hide'}
+## ----multivariate, results='hide'----------------------------------------
 ## Prior function
 my_prior <- function(pars){
   ## Diffuse gaussian priors on both parameters
@@ -244,11 +200,8 @@ output2 <- run_MCMC(parTab=startTab, data=dat, mcmcPars=mcmcPars, filename="SIR_
 chain2 <- read.csv(output2$file)
 chain2 <- chain2[chain2$sampno >= mcmcPars["adaptive_period"],]
 plot(coda::as.mcmc(chain2[,c("R0","gamma")]))
-```
 
-Convergence looks much nicer - we've reestimated our `R0` of 1.5 and `gamma` of 0.2. We could do some diagnostics with the `coda` package on the `chain` object if we want, but that's beyond the scope of this vignette. The last thing to do is to plot our estimates against the data to make sure that our answer makes sense.
-
-```{r final}
+## ----final---------------------------------------------------------------
 ## Get the maximum likelihood parameters and estimate
 ## the model trajectory for each week
 best_pars <- get_best_pars(chain2)
@@ -276,21 +229,4 @@ lines(bounds[1,],col="blue",lty=2,lwd=0.5)
 lines(bounds[2,],col="blue",lty=2,lwd=0.5)
 legend("topright",c("Data","Model","95% credible intervals"),
        col=c("red","blue","blue"),lty=c(0,1,2),pch=c(16,NA,NA))
-```
 
-The fit looks good, so we can be pretty confident that our model fitting has worked correctly.
-
-## Summary
-The key points to remember when using the package are:
-
-* Make sure that your likelihood calculating function returns a single value (the log likelihood), and takes only `parTab`, `data`, `PRIOR_FUNC`, and then any other arguments using `...`. It's helpful to abstract away as much of your solving code as possible.
-* The key bit of syntax is creating a function that **creates another** function taking only a single vector of model parameters, `pars` as in the example.
-* From the MCMC output, you can read in the MCMC and do any manipulation/tests that you like.
-* The default univariate sampler doesn't work so well when we have correlated parameters. I tend to use the univariate version to get an initial covariance matrix, and then run the multivariate sampler.
-
-## Tips
-* Starting points for your MCMC can be tricky. Ideally, you'd start at any random point from your prior. For the SIR model here, there's actually quite a narrow band of parameter values that are easily solvable with `deSolve`, so we put fairly strong bounds in the `parTab` argument. It's left to the user to decide the best way to seed your chain.
-* The `steps` column of `parTab` indicates the size of the univariate proposals. It is important to note that the sampler converts your model parameters to a unit scale between 0 and 1. If your true parameter range is -50 to 50, then a step size of 0.1 is actually performing jumps of size 1 in terms of real values. Have a look at the code for `univ_proposal` if this is confusing. A REALLY important result of this is that **when using a univariate sampler, using lower and upper bounds of `Inf` will really mess up the interpretation of step size. You therefore need to have finite bounds with the univariate sampler.**
-* It's really easy to change the flag for `fixed` in `parTab` - set it to 1 to fix a parameter.
-* There's minimal error checking with the MCMC code - I would advise testing your model solving and likelihood calculating functions before running the MCMC. It's not happy when your functions return `NaN` or `NA`!
-* You need to be aware that the `parTab` puts implicit uniform priors on your parameters via the bounds. Be aware of this when specifying additional prior functions (ie. avoid double specification of priors).

@@ -35,7 +35,7 @@ devtools::install_github("jameshay218/driftSim")
 The outputs of the MCMC work well with the `coda` package. The only real dependency is the `MASS` package for the multivariate normal proposals. If you only want to use the univariate sampler, then you don't need to worry about this.
 
 ## Basic example
-Perhaps a more relevant example is fitting an SIR model, which can be found in the vignettes [here]. Below is a very basic example fitting a gaussian distribution to some toy data. It looks like a lot of text, but if you read through it and follow the steps exactly the same logic can be applied to any model.
+Perhaps a more relevant example is fitting an SIR model, which can be found in the vignettes [here](https://jameshay218.github.io/odin/vignettes/sir_example.html). Below is a very basic example fitting a gaussian distribution to some toy data. It looks like a lot of text, but if you read through it and follow the steps exactly the same logic can be applied to any model.
 
 Firstly, make sure you have the package installed etc.
 ```r
