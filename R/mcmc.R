@@ -48,9 +48,9 @@ run_MCMC <- function(parTab,
     ## never extend the adaptive period.
     ## 'close enough' to optimal means within poptRange as specified below.
     ## currently only works for univariate proposals.
-    if(match("adaptiveLeeway",names(mcmcPars)) {
+    if(match("adaptiveLeeway",names(mcmcPars))) {
       adaptiveLeeway <- mcmcPars["adaptiveLeeway"]
-      max_adaptive_period <- ["max_adaptive_period"]
+      max_adaptive_period <- mcmcPars["max_adaptive_period"]
     } else {
       adaptiveLeeway  <- 0
       max_adaptive_period <- adaptive_period
@@ -144,6 +144,7 @@ run_MCMC <- function(parTab,
     par_i <- 1
     i <- 1
     pcurUnfixed <- -1
+    p_accept_adaptive <- NA
     
     while (i <= (iterations+adaptive_period)){
         ## If using univariate proposals
