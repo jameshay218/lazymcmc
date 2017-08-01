@@ -249,3 +249,7 @@ run_MCMC <- function(parTab,
     return(list("file"=mcmc_chain_file,"covMat"=covMat,"scale"=scale, "steps"=steps))
 }
 
+ada.mcmc.f <- function(x){
+  2*x
+}
+
