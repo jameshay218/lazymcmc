@@ -19,4 +19,3 @@ a single BIC value
 \description{
 Given an MCMC chain, calculates the BIC
 }
-

@@ -15,4 +15,3 @@ a list of strings with the errors of the parameter table
 \description{
 Takes the table of paramters used for model calculation and MCMC fitting, and returns a string error if any of the inputs are incorrectly formatted
 }
-
