@@ -35,7 +35,29 @@ run_MCMC <- function(parTab,
     opt_freq<- mcmcPars["opt_freq"]
     thin <- mcmcPars["thin"]
     adaptive_period<- mcmcPars["adaptive_period"]
+    adaptive_period_init <- adaptive_period
     save_block <- mcmcPars["save_block"]
+
+    ## added functionality by ada-w-yan: adjusting adaptive period depending on 
+    ## the acceptance ratio.  If acceptance ratio within the last opt_freq 
+    ## iterations of adaptive period not close enough to optimal,
+    ## extend adaptive period for another adaptive_period iterations.
+    ## To avoid the algorithm running infinitely, an absolute upper bound of
+    ## max_adaptive_period adaptive iterations is passed in.
+    ## if mcmcPars does not contain an element named adaptiveLeeway,
+    ## never extend the adaptive period.
+    ## 'close enough' to optimal means within poptRange as specified below.
+    ## currently only works for univariate proposals.
+    if(match("adaptiveLeeway",names(mcmcPars)) {
+      adaptiveLeeway <- mcmcPars["adaptiveLeeway"]
+      max_adaptive_period <- ["max_adaptive_period"]
+    } else {
+      adaptiveLeeway  <- 0
+      max_adaptive_period <- adaptive_period
+    }
+    poptRange <- popt * c((1 - adaptiveLeeway),(1 + adaptiveLeeway))
+    poptRange <- pmax(0,poptRange)
+    poptRange <- pmin(1,poptRange)
 
     param_length <- nrow(parTab)
     unfixed_pars <- which(parTab$fixed == 0)
@@ -120,7 +142,10 @@ run_MCMC <- function(parTab,
     no_recorded <- 1
     sampno <- 2
     par_i <- 1
-    for (i in 1:(iterations+adaptive_period)){
+    i <- 1
+    pcurUnfixed <- -1
+    
+    while (i <= (iterations+adaptive_period)){
         ## If using univariate proposals
         if(is.null(mvrPars)) {
             ## For each parameter (Gibbs)
@@ -220,6 +245,26 @@ run_MCMC <- function(parTab,
             }
             chain_index <- chain_index + 1
         }
+      
+      ## added functionality by ada-w-yan
+      ## if at end of adaptive period,
+      ## decide whether to extend adaptive period
+        if(i == adaptive_period){
+            ## update current acceptance probability
+            pcurUnfixed <- pcur[unfixed_pars]
+            ## if current acceptance probability not close enough to optimal, 
+            ## extend adaptive period
+            if(((max(pcurUnfixed) > poptRange[2]) || (min(pcurUnfixed) < poptRange[1])) &&
+               adaptive_period < max_adaptive_period){
+              ## update total number of adaptive iterations run
+              adaptive_period <- adaptive_period + adaptive_period_init
+              ## expand matrix in which adaptive iterations are stored
+              opt_chain <- rbind(opt_chain, matrix(nrow=adaptive_period_init,ncol=unfixed_par_length))
+            } else {
+              p_accept_adaptive <- pcurUnfixed
+            }
+        }
+        
         if(i %% save_block == 0){
             message(cat("Current iteration: ", i, sep="\t"))
             ## Print out optimisation frequencies
@@ -231,6 +276,7 @@ run_MCMC <- function(parTab,
             no_recorded <- 1
         }
         sampno <- sampno + 1
+        i <- i + 1
     }
     
     ## If there are some recorded values left that haven't been saved, then append these to the MCMC chain file. Note
@@ -246,17 +292,16 @@ run_MCMC <- function(parTab,
     } else {
         steps <- NULL
     }
-    return(list("file"=mcmc_chain_file,"covMat"=covMat,"scale"=scale, "steps"=steps))
+    
+    p_accept <- tempaccepted/tempiter
+    p_accept <- p_accept[unfixed_pars]
+    
+    ## by ada-w-yan: we now output the actual adaptive period used,
+    ## the acceptance probability during the last opt_freq iterations
+    ## of the adaptive period, and the acceptance probability during the
+    ## non-adaptive iterations
+    return(list("file"=mcmc_chain_file,"covMat"=covMat,"scale"=scale, 
+                "steps"=steps, "adaptive_period" = adaptive_period,
+                "p_accept_adaptive" = p_accept_adaptive,
+                "p_accept" = p_accept))
 }
-
-#' test
-#'
-#' test
-#'
-#' @param x test
-#' @return 2x
-#' @export
-ada.mcmc.f <- function(x){
-  2*x
-}
-
