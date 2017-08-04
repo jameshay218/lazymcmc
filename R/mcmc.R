@@ -48,7 +48,7 @@ run_MCMC <- function(parTab,
     ## never extend the adaptive period.
     ## 'close enough' to optimal means within poptRange as specified below.
     ## currently only works for univariate proposals.
-    if(as.logical(match("adaptiveLeeway",names(mcmcPars),nomatch = 0))) {
+    if("adaptiveLeeway" %in% names(mcmcPars)) {
       adaptiveLeeway <- mcmcPars[["adaptiveLeeway"]]
       max_adaptive_period <- mcmcPars[["max_adaptive_period"]]
     } else {
@@ -344,6 +344,9 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
   startTab.current <- startTab
   total.iterations <- 0
   filenames.current <- filenames
+  if(!("max_total_iterations" %in% names(mcmcPars))){
+    mcmcPars <- c(mcmcPars, "max_total_iterations" = mcmcPars[["iterations"]])
+  }
   timing <- system.time(
     while(!diagnostics$converged && total.iterations < mcmcPars[["max_total_iterations"]]){
       ## run MCMC for random starting values
@@ -418,6 +421,83 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
              paste0(filenames[1],".diagnostics"),
              overwrite = 1)
   list("diagnostics" = diagnostics, "output" = output)
+}
+
+#' see whether MCMC chains have converged; if so, calculate effective sample size and burn-in
+#' 
+#' see whether MCMC chains have converged; if so, calculate effective sample size and burn-in
+#' 
+#' @param filenames character vector of filenames, each corresponding to one csv
+#' file outputted by run_MCMC
+#' @param check.freq: check whether convergence has occurred every check.freq iterations
+#' along the chain
+#' @param fixed: logical vector: vector whose entries are TRUE if the corresponding
+#' parameter is fixed, FALSE if the parameter is fitted. i.e. parTab$fixed
+#' @param skip: numeric vector either of length 1 or of same length as filenames: 
+#' skip this many entries from the start of each csv file
+#' @return if convergence has occurred, return a list with the elements
+#' converged: logical = TRUE
+#' burn.in: the number of burn-in iterations
+#' combined.size: effective sample size combined across chains
+#' if convergence has not occurred, return a list with the element
+#' converged: logical = FALSE
+#' max.prsf:maximum value of potential scale reduction factor across parameters
+calc.diagnostics <- function(filenames,check.freq,fixed,skip = 0){
+  
+  ## replicate skip value if more than one filename given but only one skip value given
+  if(length(skip) == 1){
+    skip <- rep(skip, length(filenames))
+  }
+  ## check if number of skip values equal to number of filenames
+  if(length(skip) != length(filenames)){
+    stop("input vector filenames different length to input vector skip")
+  }
+  data <- lapply(filenames,function(x)read.csv(x))
+  # discard parameters which are fixed
+  data <- lapply(1:length(data),function(x) data[[x]][(skip[x]+1):nrow(data[[x]]),2:(length(fixed)+1)])
+  # data <- lapply(data,function(x) x[(skip+1):nrow(x),2:(length(fixed)+1)])
+  
+  data <- lapply(data,function(x) x[,!as.logical(fixed),drop = FALSE])
+  # determine length of shortest chain
+  min_length <- min(sapply(data,function(x)dim(x)[1]))
+  # if prsf for all parameters below threshold, converged
+  thres = 1.1
+  # calculate potential scale reduction factor
+  # note: discards first half of chain as default
+  
+  for (k in seq(check.freq,min_length,check.freq)){
+    data_temp <- lapply(data,function(x)x[1:k,])
+    data_temp <- lapply(data_temp,mcmc)
+    combinedchains <- mcmc.list(data_temp)
+    psrf <- gelman.diag(combinedchains)
+    max.psrf <- max(psrf[[1]][,2])
+    print(max.psrf)
+    # if converged, calculate summary statistics at this point and return
+    if(max.psrf < thres){
+      burn.in <- ceiling(k/2)
+      # keep second half of converged chain, plus all samples afterwards
+      data <- lapply(data,function(x)x[(burn.in+1):min_length,])
+      data <- lapply(data,mcmc)
+      combinedchains <- mcmc.list(data)
+      # calculate effective sample size
+      combined.size <- effectiveSize(combinedchains)
+      return(list("converged" = TRUE,
+                  "burn.in" = burn.in,
+                  "combined.size" = combined.size))
+    }
+  }
+  # else return summary statistics for second half of chain
+  burn.in <- ceiling(k/2)
+  # keep second half of converged chain, plus all samples afterwards
+  data <- lapply(data,function(x)x[(burn.in+1):min_length,])
+  data <- lapply(data,mcmc)
+  combinedchains <- mcmc.list(data)
+  # calculate effective sample size
+  combined.size <- effectiveSize(combinedchains)
+  list("converged" = FALSE,
+       "max.psrf" = max.psrf,
+       "burn.in" = burn.in,
+       "combined.size" = combined.size)
 }
 
 #' writes a list to a text file
