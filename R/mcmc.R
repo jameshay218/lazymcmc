@@ -28,7 +28,7 @@ run_MCMC <- function(parTab,
 
     ## Allowable error in scale tuning
     TUNING_ERROR <- 0.1
-    
+
     ## Extract MCMC parameters
     iterations <- mcmcPars[["iterations"]]
     popt <- mcmcPars[["popt"]]
@@ -176,7 +176,7 @@ run_MCMC <- function(parTab,
               new_probab <- posterior.out$lik
               new_misc <- posterior.out$misc
             }
-            
+
             log_prob <- min(new_probab-probab,0)
          
             ## Accept with probability 1 if better, or proportional to
@@ -185,7 +185,7 @@ run_MCMC <- function(parTab,
                 current_pars <- proposal
                 probab <- new_probab
                 misc <- new_misc
-                
+
                 ## Store acceptances
                 if(is.null(mvrPars)){
                     tempaccepted[j] <- tempaccepted[j] + 1
@@ -216,7 +216,7 @@ run_MCMC <- function(parTab,
             pcur <- tempaccepted/tempiter
             ## Save each step
             opt_chain[chain_index,] <- current_pars[unfixed_pars]
-           
+
             ## If in an adaptive step
             if(chain_index %% opt_freq == 0){
                 ## If using univariate proposals
@@ -305,4 +305,137 @@ run_MCMC <- function(parTab,
                 "steps"=steps, "adaptive_period" = adaptive_period,
                 "p_accept_adaptive" = p_accept_adaptive,
                 "p_accept" = p_accept))
+}
+
+#' Wrapper to run multiple parallel MCMC chains until convergence
+#'
+#' Runs run_MCMC, calculates convergence diagnostics, 
+#' repeats until convergence or maximum number of iterations reached
+#' currently only works for univariate proposals
+#' @param startTab the parameter table controlling information 
+#' such as bounds, initial values etc.
+#' Because the different chains have different initial values, this is a list 
+#' where each element is of the form of parTab in run_MCMC, but the
+#' values column has different starting values
+#' @param data the data frame of data to be fitted
+#' @param mcmcPars named vector with parameters for the MCMC procedure. 
+#' mandatory: iterations, popt, opt_freq, thin, burnin, adaptive_period, save_block
+#' optional: max_total_iterations, max_adaptive_period, adaptiveLeeway
+#' @param filenames character vector:
+#' the full filepaths at which the parallel MCMC chains should be saved. 
+#' "_chain.csv" will be appended to the end of this, 
+#' so filenames should have no file extensions
+#' the length of filenames will be the number of parallel chains run.
+#' @param CREATE_POSTERIOR_FUNC pointer to posterior function creator used to 
+#' calculate a likelihood. See the main example - 
+#' this should return your likelihood function (that only takes a single vector 
+#' of parameters as an argument).
+#' @param PRIOR_FUNC user function of prior for model parameters. 
+#' Should take values, names and local from param_table
+#' @return a list with: 1) convergence diagnostics; 2) the output from run_MCMC
+#' (the first loop around)
+#' @export
+run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,  
+                          CREATE_POSTERIOR_FUNC, PRIOR_FUNC){
+  
+  n.replicates <- length(filenames)
+  n.pars <- nrow(startTab[[1]])
+  diagnostics <- list(converged = FALSE)
+  startTab.current <- startTab
+  total.iterations <- 0
+  filenames.current <- filenames
+  timing <- system.time(
+    while(!diagnostics$converged && total.iterations < mcmcPars[["max_total_iterations"]]){
+      ## run MCMC for random starting values
+      output.current <- lapply(1:n.replicates, 
+                               function(x) run_MCMC(startTab.current[[x]], data, mcmcPars, 
+                                                    filenames.current[x], CREATE_POSTERIOR_FUNC, 
+                                                    NULL, PRIOR_FUNC = PRIOR_FUNC  ,0.1))
+      
+      # if first time running
+      if(total.iterations == 0){
+        output <- output.current
+        # get current parameters
+        current.pars <- lapply(output, function(x) read.csv(x$file))
+        current.pars <- lapply(current.pars, function(x) as.numeric(x[nrow(x),2:(n.pars+1)]))
+      } else {
+        # append the new output file
+        append.csv <- function(x){
+          # read new output file
+          temp <- read.csv(output.current[[x]]$file)
+          temp <- temp[2:nrow(temp),]
+          # renumber samples to continue from old file
+          temp$sampno <- (1:nrow(temp)) + (output[[x]]$adaptive_period + total.iterations + 1)
+          current.pars <- as.numeric(temp[nrow(temp),2:(n.pars+1)])
+          # append to old file
+          write.table(temp, output[[x]]$file,
+                      row.names=FALSE,col.names=FALSE,sep=",",append=TRUE)
+          # delete cont file
+          file.remove(output.current[[x]]$file)
+          invisible(current.pars)
+        }
+        current.pars <- lapply(1:n.replicates,append.csv)
+      }
+      
+      # write output e.g. step size to file
+      lapply(1:n.replicates, 
+             function(x) write.list(output.current[[x]],
+                                    paste0(filenames[x],".out"),
+                                    overwrite = (total.iterations == 0)))
+      
+      ## can't calculate convergence diagnostics if only one replicate run,
+      ## so stop running here
+      if(n.replicates == 1){
+        diagnostics$converged <- TRUE
+        diagnostics$burn.in <- mcmcPars["iterations"]/2
+      } else {
+        ## calculate convergence diagnostics
+        diagnostics <- calc.diagnostics(filenames = sapply(output, function(x) x$file),
+                                        check.freq = floor(mcmcPars["iterations"]/10),
+                                        fixed = startTab[[1]]$fixed,
+                                        skip = sapply(output, function(x) x$adaptive_period))
+      }
+      
+      total.iterations <- total.iterations + mcmcPars[["iterations"]]
+      
+      ## get things ready to run again if it hasn't converged
+      
+      startTab.current <- lapply(1:n.replicates,
+                                 function(x) cbind(data.frame(values = current.pars[[x]]),
+                                                   startTab[[1]][c("names","fixed","lower_bound","upper_bound")],
+                                                   data.frame(steps = output.current[[x]]$steps)))
+      mcmcPars["adaptive_period"] <- 0
+      filenames.current <- paste0(filenames,"_new")
+      
+    }
+  )
+  
+  # write elapsed time to file
+  write(timing,paste0(filenames[1],".time"))
+  
+  # write diagnostics to file
+  write.list(diagnostics,
+             paste0(filenames[1],".diagnostics"),
+             overwrite = 1)
+  list("diagnostics" = diagnostics, "output" = output)
+}
+
+#' writes a list to a text file
+#' 
+#' writes a list to a text file
+#' 
+#' doesn't work for lists of lists
+#' @param list.to.write: list to write to file
+#' @param filename: character vector of length 1: filename to write to
+#' @return NULL
+write.list <- function(list.to.write,filename,overwrite){
+  if(any(sapply(list.to.write,is.list))){
+    stop("error: write.list does not work for lists of lists")
+  }
+  if(file.exists(filename) && overwrite){
+    warning(paste0("overwriting ",filename))
+    file.remove(filename)
+  }
+  lapply(list.to.write, write, filename, append=TRUE, ncolumns=1000, sep = ",")
+  invisible(NULL)
 }
