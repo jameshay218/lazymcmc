@@ -30,13 +30,13 @@ run_MCMC <- function(parTab,
     TUNING_ERROR <- 0.1
     
     ## Extract MCMC parameters
-    iterations <- mcmcPars["iterations"]
-    popt <- mcmcPars["popt"]
-    opt_freq<- mcmcPars["opt_freq"]
-    thin <- mcmcPars["thin"]
-    adaptive_period<- mcmcPars["adaptive_period"]
+    iterations <- mcmcPars[["iterations"]]
+    popt <- mcmcPars[["popt"]]
+    opt_freq<- mcmcPars[["opt_freq"]]
+    thin <- mcmcPars[["thin"]]
+    adaptive_period<- mcmcPars[["adaptive_period"]]
     adaptive_period_init <- adaptive_period
-    save_block <- mcmcPars["save_block"]
+    save_block <- mcmcPars[["save_block"]]
 
     ## added functionality by ada-w-yan: adjusting adaptive period depending on 
     ## the acceptance ratio.  If acceptance ratio within the last opt_freq 
@@ -49,8 +49,8 @@ run_MCMC <- function(parTab,
     ## 'close enough' to optimal means within poptRange as specified below.
     ## currently only works for univariate proposals.
     if(as.logical(match("adaptiveLeeway",names(mcmcPars),nomatch = 0))) {
-      adaptiveLeeway <- mcmcPars["adaptiveLeeway"]
-      max_adaptive_period <- mcmcPars["max_adaptive_period"]
+      adaptiveLeeway <- mcmcPars[["adaptiveLeeway"]]
+      max_adaptive_period <- mcmcPars[["max_adaptive_period"]]
     } else {
       adaptiveLeeway  <- 0
       max_adaptive_period <- adaptive_period
