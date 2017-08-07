@@ -19,6 +19,7 @@ run_MCMC <- function(parTab,
                      mvrPars=NULL,
                      PRIOR_FUNC=NULL,
                      OPT_TUNING=0.2,
+                     seed,
                      ...){
     ## check that input parameters are correctly formatted
     parTab_check <- lazymcmc::param_table_check(parTab)
@@ -145,6 +146,10 @@ run_MCMC <- function(parTab,
     i <- 1
     pcurUnfixed <- -1
     p_accept_adaptive <- NA
+    
+    if(!missing(seed)){
+      set.seed(seed)
+    }
     
     while (i <= (iterations+adaptive_period)){
         ## If using univariate proposals
@@ -354,7 +359,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
         output.current <- parLapply(cl = NULL,1:n.replicates, 
                                  function(x) run_MCMC(startTab.current[[x]], data, mcmcPars, 
                                                       filenames.current[x], CREATE_POSTERIOR_FUNC, 
-                                                      NULL, PRIOR_FUNC = PRIOR_FUNC  ,0.1))
+                                                      NULL, PRIOR_FUNC = PRIOR_FUNC  ,0.1, seed = x))
     } else{
       output.current <- lapply(1:n.replicates, 
                                function(x) run_MCMC(startTab.current[[x]], data, mcmcPars, 
