@@ -337,8 +337,7 @@ run_MCMC <- function(parTab,
 #' (the first loop around)
 #' @export
 run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,  
-                          CREATE_POSTERIOR_FUNC, PRIOR_FUNC){
-  print(3)
+                          CREATE_POSTERIOR_FUNC, PRIOR_FUNC, run.parallel = FALSE){
   n.replicates <- length(filenames)
   n.pars <- nrow(startTab[[1]])
   diagnostics <- list(converged = FALSE)
