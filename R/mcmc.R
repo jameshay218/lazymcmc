@@ -465,15 +465,16 @@ calc.diagnostics <- function(filenames,check.freq,fixed,skip = 0){
   # calculate potential scale reduction factor
   # note: discards first half of chain as default
   
+  max.psrf <- numeric()
   for (k in seq(check.freq,min_length,check.freq)){
     data_temp <- lapply(data,function(x)x[1:k,])
     data_temp <- lapply(data_temp,mcmc)
     combinedchains <- mcmc.list(data_temp)
     psrf <- gelman.diag(combinedchains)
-    max.psrf <- max(psrf[[1]][,2])
-    print(max.psrf)
+    max.psrf <- c(max.psrf,max(psrf[[1]][,2]))
+    print(max.psrf[length(max.psrf)])
     # if converged, calculate summary statistics at this point and return
-    if(max.psrf < thres){
+    if(max.psrf[length(max.psrf)] < thres){
       burn.in <- ceiling(k/2)
       # keep second half of converged chain, plus all samples afterwards
       data <- lapply(data,function(x)x[(burn.in+1):min_length,])
@@ -482,6 +483,7 @@ calc.diagnostics <- function(filenames,check.freq,fixed,skip = 0){
       # calculate effective sample size
       combined.size <- effectiveSize(combinedchains)
       return(list("converged" = TRUE,
+                  "max.psrf" = max.psrf,
                   "burn.in" = burn.in,
                   "combined.size" = combined.size))
     }
