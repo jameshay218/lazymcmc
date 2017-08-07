@@ -5,7 +5,7 @@
 \title{Wrapper to run multiple parallel MCMC chains until convergence}
 \usage{
 run_MCMC_loop(startTab, data, mcmcPars, filenames, CREATE_POSTERIOR_FUNC,
-  PRIOR_FUNC)
+  PRIOR_FUNC, run.parallel = FALSE)
 }
 \arguments{
 \item{startTab}{the parameter table controlling information 
@@ -33,6 +33,8 @@ of parameters as an argument).}
 
 \item{PRIOR_FUNC}{user function of prior for model parameters. 
 Should take values, names and local from param_table}
+
+\item{run.parallel}{logical vector og length 1. If TRUE, run in parallel on cluster}
 }
 \value{
 a list with: 1) convergence diagnostics; 2) the output from run_MCMC

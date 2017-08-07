@@ -332,12 +332,13 @@ run_MCMC <- function(parTab,
 #' of parameters as an argument).
 #' @param PRIOR_FUNC user function of prior for model parameters. 
 #' Should take values, names and local from param_table
+#' @param run.parallel logical vector og length 1. If TRUE, run in parallel on cluster
 #' @return a list with: 1) convergence diagnostics; 2) the output from run_MCMC
 #' (the first loop around)
 #' @export
 run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,  
                           CREATE_POSTERIOR_FUNC, PRIOR_FUNC){
-  
+  print(3)
   n.replicates <- length(filenames)
   n.pars <- nrow(startTab[[1]])
   diagnostics <- list(converged = FALSE)
@@ -350,10 +351,17 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
   timing <- system.time(
     while(!diagnostics$converged && total.iterations < mcmcPars[["max_total_iterations"]]){
       ## run MCMC for random starting values
+      if(run.parallel){
+        output.current <- parLapply(cl = NULL,1:n.replicates, 
+                                 function(x) run_MCMC(startTab.current[[x]], data, mcmcPars, 
+                                                      filenames.current[x], CREATE_POSTERIOR_FUNC, 
+                                                      NULL, PRIOR_FUNC = PRIOR_FUNC  ,0.1))
+    } else{
       output.current <- lapply(1:n.replicates, 
                                function(x) run_MCMC(startTab.current[[x]], data, mcmcPars, 
                                                     filenames.current[x], CREATE_POSTERIOR_FUNC, 
                                                     NULL, PRIOR_FUNC = PRIOR_FUNC  ,0.1))
+    }
       
       # if first time running
       if(total.iterations == 0){
