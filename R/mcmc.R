@@ -442,6 +442,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
 #' if convergence has not occurred, return a list with the element
 #' converged: logical = FALSE
 #' max.prsf:maximum value of potential scale reduction factor across parameters
+#' @export
 calc.diagnostics <- function(filenames,check.freq,fixed,skip = 0){
   
   ## replicate skip value if more than one filename given but only one skip value given
