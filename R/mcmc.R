@@ -377,7 +377,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
         # append the new output file
         append.csv <- function(x){
           # read new output file
-          temp <- read.csv(output.current[[x]]$file)
+          temp <- data.table::fread(output.current[[x]]$file)
           temp <- temp[2:nrow(temp),]
           # renumber samples to continue from old file
           temp$sampno <- (1:nrow(temp)) + (output[[x]]$adaptive_period + total.iterations + 1)
@@ -465,12 +465,12 @@ calc.diagnostics <- function(filenames,check.freq,fixed,skip = 0){
   if(length(skip) != length(filenames)){
     stop("input vector filenames different length to input vector skip")
   }
-  data <- lapply(filenames,function(x)read.csv(x))
+  data <- lapply(filenames,function(x) data.table::fread(x))
   # discard parameters which are fixed
   data <- lapply(1:length(data),function(x) data[[x]][(skip[x]+1):nrow(data[[x]]),2:(length(fixed)+1)])
   # data <- lapply(data,function(x) x[(skip+1):nrow(x),2:(length(fixed)+1)])
   
-  data <- lapply(data,function(x) x[,!as.logical(fixed),drop = FALSE])
+  data <- lapply(data,function(x) x[,!as.logical(fixed),drop = FALSE, with = FALSE])
   # determine length of shortest chain
   min_length <- min(sapply(data,function(x)dim(x)[1]))
   # if prsf for all parameters below threshold, converged
