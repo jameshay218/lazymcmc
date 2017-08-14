@@ -392,7 +392,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
           temp <- data.table::fread(output.current[[x]]$file)
           temp <- temp[2:nrow(temp),]
           # renumber samples to continue from old file
-          temp$sampno <- (1:nrow(temp)) + (output[[x]]$adaptive_period + total.iterations + 1)
+          temp$sampno <- (1:nrow(temp))*mcmcPars[["thin"]] + (output[[x]]$adaptive_period + total.iterations + 1)
           current.pars <- as.numeric(temp[nrow(temp),2:(n.pars+1)])
           # append to old file
           write.table(temp, output[[x]]$file,
