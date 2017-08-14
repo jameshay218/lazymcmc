@@ -371,7 +371,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
       if(total.iterations == 0){
         output <- output.current
         # get current parameters
-        current.pars <- lapply(output, function(x) read.csv(x$file))
+        current.pars <- lapply(output, function(x) data.table::fread(x$file))
         current.pars <- lapply(current.pars, function(x) as.numeric(x[nrow(x),2:(n.pars+1)]))
       } else {
         # append the new output file
@@ -465,7 +465,7 @@ calc.diagnostics <- function(filenames,check.freq,fixed,skip = 0){
   if(length(skip) != length(filenames)){
     stop("input vector filenames different length to input vector skip")
   }
-  data <- lapply(filenames,function(x) data.table::fread(x))
+  data <- lapply(filenames,function(x) fread(x))
   # discard parameters which are fixed
   data <- lapply(1:length(data),function(x) data[[x]][(skip[x]+1):nrow(data[[x]]),2:(length(fixed)+1)])
   # data <- lapply(data,function(x) x[(skip+1):nrow(x),2:(length(fixed)+1)])
