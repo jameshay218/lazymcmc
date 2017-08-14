@@ -147,8 +147,16 @@ run_MCMC <- function(parTab,
     pcurUnfixed <- -1
     p_accept_adaptive <- NA
     
+    ## set seed
     if(!missing(seed)){
-      set.seed(seed)
+        # using an integer
+        if(length(seed) == 1){
+          set.seed(seed)
+          # or a previous state
+        } else {
+        .Random.seed <- seed
+        }
+
     }
     
     while (i <= (iterations+adaptive_period)){
@@ -309,7 +317,8 @@ run_MCMC <- function(parTab,
     return(list("file"=mcmc_chain_file,"covMat"=covMat,"scale"=scale, 
                 "steps"=steps, "adaptive_period" = adaptive_period,
                 "p_accept_adaptive" = p_accept_adaptive,
-                "p_accept" = p_accept))
+                "p_accept" = p_accept,
+                "seed" = .Random.seed))
 }
 
 #' Wrapper to run multiple parallel MCMC chains until convergence
@@ -352,6 +361,9 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
   if(!("max_total_iterations" %in% names(mcmcPars))){
     mcmcPars <- c(mcmcPars, "max_total_iterations" = mcmcPars[["iterations"]])
   }
+
+  seed <- lapply(1:n.replicates, function(x) x)
+
   timing <- system.time(
     while(!diagnostics$converged && total.iterations < mcmcPars[["max_total_iterations"]]){
       ## run MCMC for random starting values
@@ -359,14 +371,14 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
         output.current <- parLapply(cl = NULL,1:n.replicates, 
                                  function(x) run_MCMC(startTab.current[[x]], data, mcmcPars, 
                                                       filenames.current[x], CREATE_POSTERIOR_FUNC, 
-                                                      NULL, PRIOR_FUNC = PRIOR_FUNC  ,0.1, seed = x))
+                                                      NULL, PRIOR_FUNC = PRIOR_FUNC  ,0.1, seed = seed[[x]]))
     } else{
       output.current <- lapply(1:n.replicates, 
                                function(x) run_MCMC(startTab.current[[x]], data, mcmcPars, 
                                                     filenames.current[x], CREATE_POSTERIOR_FUNC, 
-                                                    NULL, PRIOR_FUNC = PRIOR_FUNC  ,0.1))
+                                                    NULL, PRIOR_FUNC = PRIOR_FUNC  ,0.1, seed = seed[[x]]))
     }
-      
+
       # if first time running
       if(total.iterations == 0){
         output <- output.current
@@ -391,10 +403,13 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
         }
         current.pars <- lapply(1:n.replicates,append.csv)
       }
-      
+
       # write output e.g. step size to file
+      output.write <- output.current
+      seed.idx <- which(names(output.write[[1]]) == "seed")
+      output.write <- lapply(output.write, function(x) x[-seed.idx])
       lapply(1:n.replicates, 
-             function(x) write.list(output.current[[x]],
+             function(x) write.list(output.write[[x]],
                                     paste0(filenames[x],".out"),
                                     overwrite = (total.iterations == 0)))
       
@@ -421,7 +436,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
                                                    data.frame(steps = output.current[[x]]$steps)))
       mcmcPars["adaptive_period"] <- 0
       filenames.current <- paste0(filenames,"_new")
-      
+      seed <- lapply(output.current, function(x) x$seed)
     }
   )
   
@@ -465,7 +480,7 @@ calc.diagnostics <- function(filenames,check.freq,fixed,skip = 0){
   if(length(skip) != length(filenames)){
     stop("input vector filenames different length to input vector skip")
   }
-  data <- lapply(filenames,function(x) fread(x))
+  data <- lapply(filenames,function(x) data.table::fread(x))
   # discard parameters which are fixed
   data <- lapply(1:length(data),function(x) data[[x]][(skip[x]+1):nrow(data[[x]]),2:(length(fixed)+1)])
   # data <- lapply(data,function(x) x[(skip+1):nrow(x),2:(length(fixed)+1)])
