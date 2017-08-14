@@ -421,9 +421,9 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
       } else {
         ## calculate convergence diagnostics
         diagnostics <- calc.diagnostics(filenames = sapply(output, function(x) x$file),
-                                        check.freq = floor(mcmcPars["iterations"]/10),
+                                        check.freq = floor(mcmcPars[["iterations"]]/10/mcmcPars[["thin"]]),
                                         fixed = startTab[[1]]$fixed,
-                                        skip = sapply(output, function(x) x$adaptive_period))
+                                        skip = sapply(output, function(x) floor(x$adaptive_period/mcmcPars[["thin"]])))
       }
       
       total.iterations <- total.iterations + mcmcPars[["iterations"]]
@@ -481,6 +481,7 @@ calc.diagnostics <- function(filenames,check.freq,fixed,skip = 0){
     stop("input vector filenames different length to input vector skip")
   }
   data <- lapply(filenames,function(x) data.table::fread(x))
+  
   # discard parameters which are fixed
   data <- lapply(1:length(data),function(x) data[[x]][(skip[x]+1):nrow(data[[x]]),2:(length(fixed)+1)])
   # data <- lapply(data,function(x) x[(skip+1):nrow(x),2:(length(fixed)+1)])
@@ -495,9 +496,11 @@ calc.diagnostics <- function(filenames,check.freq,fixed,skip = 0){
   
   max.psrf <- numeric()
   for (k in seq(check.freq,min_length,check.freq)){
+    
     data_temp <- lapply(data,function(x)x[1:k,])
     data_temp <- lapply(data_temp,mcmc)
     combinedchains <- mcmc.list(data_temp)
+    
     psrf <- gelman.diag(combinedchains)
     max.psrf <- c(max.psrf,max(psrf[[1]][,2]))
     print(max.psrf[length(max.psrf)])
