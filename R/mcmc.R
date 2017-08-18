@@ -263,7 +263,7 @@ run_MCMC <- function(parTab,
       ## added functionality by ada-w-yan
       ## if at end of adaptive period,
       ## decide whether to extend adaptive period
-        if(i == adaptive_period){
+        if(is.null(mvrPars) && i == adaptive_period){
             ## update current acceptance probability
             pcurUnfixed <- pcur[unfixed_pars]
             ## if current acceptance probability not close enough to optimal, 
@@ -308,7 +308,9 @@ run_MCMC <- function(parTab,
     }
     
     p_accept <- tempaccepted/tempiter
-    p_accept <- p_accept[unfixed_pars]
+    if(is.null(mvrPars)){
+      p_accept <- p_accept[unfixed_pars]
+    }
     
     ## by ada-w-yan: we now output the actual adaptive period used,
     ## the acceptance probability during the last opt_freq iterations
@@ -330,7 +332,8 @@ run_MCMC <- function(parTab,
 #' such as bounds, initial values etc.
 #' Because the different chains have different initial values, this is a list 
 #' where each element is of the form of parTab in run_MCMC, but the
-#' values column has different starting values
+#' values column has different starting values.
+#' startTab is acutally a list of n of these where n is the number of parallel chains
 #' @param data the data frame of data to be fitted
 #' @param mcmcPars named vector with parameters for the MCMC procedure. 
 #' mandatory: iterations, popt, opt_freq, thin, burnin, adaptive_period, save_block
@@ -344,14 +347,19 @@ run_MCMC <- function(parTab,
 #' calculate a likelihood. See the main example - 
 #' this should return your likelihood function (that only takes a single vector 
 #' of parameters as an argument).
+#' @param mvrPars a list of parameters if using a multivariate proposal. 
+#' Must contain an initial covariance matrix, weighting for adapting cov matrix,
+#'  and an initial scaling parameter (0-1)
+#' mvrPars is acutally a list of n of these where n is the number of parallel chains
 #' @param PRIOR_FUNC user function of prior for model parameters. 
 #' Should take values, names and local from param_table
-#' @param run.parallel logical vector og length 1. If TRUE, run in parallel on cluster
+#' @param run.parallel logical vector of length 1. If TRUE, run in parallel on cluster
 #' @return a list with: 1) convergence diagnostics; 2) the output from run_MCMC
 #' (the first loop around)
 #' @export
 run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,  
-                          CREATE_POSTERIOR_FUNC, PRIOR_FUNC, run.parallel = FALSE){
+                          CREATE_POSTERIOR_FUNC, 
+                          mvrPars, PRIOR_FUNC, run.parallel = FALSE){
   n.replicates <- length(filenames)
   n.pars <- nrow(startTab[[1]])
   diagnostics <- list(converged = FALSE)
@@ -371,12 +379,12 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
         output.current <- parLapply(cl = NULL,1:n.replicates, 
                                  function(x) run_MCMC(startTab.current[[x]], data, mcmcPars, 
                                                       filenames.current[x], CREATE_POSTERIOR_FUNC, 
-                                                      NULL, PRIOR_FUNC = PRIOR_FUNC  ,0.1, seed = seed[[x]]))
+                                                      mvrPars[[x]], PRIOR_FUNC = PRIOR_FUNC  ,0.1, seed = seed[[x]]))
     } else{
       output.current <- lapply(1:n.replicates, 
                                function(x) run_MCMC(startTab.current[[x]], data, mcmcPars, 
                                                     filenames.current[x], CREATE_POSTERIOR_FUNC, 
-                                                    NULL, PRIOR_FUNC = PRIOR_FUNC  ,0.1, seed = seed[[x]]))
+                                                    mvrPars[[x]], PRIOR_FUNC = PRIOR_FUNC  ,0.1, seed = seed[[x]]))
     }
 
       # if first time running
@@ -430,11 +438,30 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
       
       ## get things ready to run again if it hasn't converged
       
-      startTab.current <- lapply(1:n.replicates,
-                                 function(x) cbind(data.frame(values = current.pars[[x]]),
-                                                   startTab[[1]][c("names","fixed","lower_bound","upper_bound")],
-                                                   data.frame(steps = output.current[[x]]$steps)))
+
+      
       mcmcPars["adaptive_period"] <- 0
+      
+      if(is.null(mvrPars)){
+        startTab.current <- lapply(1:n.replicates,
+                                   function(x) cbind(data.frame(values = current.pars[[x]]),
+                                                     startTab[[1]][c("names","fixed","lower_bound","upper_bound")],
+                                                     data.frame(steps = output.current[[x]]$steps)))
+      } else {
+        startTab.current <- lapply(1:n.replicates,
+                                   function(x) cbind(data.frame(values = current.pars[[x]]),
+                                                     startTab[[1]][c("names","fixed","lower_bound","upper_bound","steps")]))
+        
+        make_new_mvrPars <- function(output){
+          covMat_expand <- diag(nrow(startTab[[1]]))
+          unfixed <- which(startTab[[1]]$fixed == 0)
+          covMat_expand[unfixed,unfixed] <- output$covMat
+          list(covMat_expand, output$scale, w = mvrPars[[1]]$w)
+        }
+        
+        mvrPars <- lapply(output.current, make_new_mvrPars)
+      }
+      
       filenames.current <- paste0(filenames,"_new")
       seed <- lapply(output.current, function(x) x$seed)
     }
