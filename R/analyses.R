@@ -50,3 +50,55 @@ calculate_AIC <- function(chain, parTab){
     AIC <- 2*k - 2*(max(chain$lnlike))
     return(AIC)
 }
+
+#' calculate and plot profile likelihood around a point in parameter space
+#' 
+#' calculate and plot profile likelihood around a point in parameter space
+#' 
+#' @param stuck_values a named numeric vector of parameter values (length m)
+#' around which to construct the profile likelihood
+#' @param f a function handle to calculate the log likelihood. 
+#' f <- CREATE_POSTERIOR_FUNC(parTab, data, PRIOR_FUNC)
+#' @param fixed a numeric vector of length m indicating whether a parameter is 
+#' fixed (1) or fitted (0)
+#' @param n_values a numeric vector of length 1 indicating the number of points 
+#' to scan over in 1D parameter space for each profile. Must take an integer value.
+#' @param range a numeric vector of length 1 indicating the range over which to
+#' scan in 1D parameter space for each profile (so we go range/2 on each side of
+#' the central value)
+#' @param par.names.plot a character vector of length m to label the horizontal
+#' axes of the profile plots
+#' @return a list of ggplot objects containing the profile likelihood plots
+#' @export 
+profile_likelihood_all <- function(stuck_values, f, fixed, n_values, range, par.names.plot){
+  f_lik <- function(pars){
+    out <- f(pars)
+    if(is.atomic(out)){
+      out
+    } else {
+      out$lik
+    }
+  }
+  
+  par_names <- names(stuck_values)
+  stuck_values <- as.numeric(stuck_values)  
+  stuck_values_df <- data.frame(matrix(rep(stuck_values,n_values),nrow = n_values,byrow = TRUE))
+  colnames(stuck_values_df) <- par_names
+  
+  profile_likelihood <- function(col){
+    stuck_values_df[,col] <- seq(stuck_values_df[1,col] - range / 2,
+                                 stuck_values_df[1,col] + range / 2, 
+                                 length.out = n_values)
+    stuck_values_df$lnlike <- apply(stuck_values_df,1,f_lik)
+    g <- ggplot(stuck_values_df,aes_string(x = par_names[col], y = "lnlike"))
+    g <- g + geom_point() +
+      geom_vline(xintercept = stuck_values[col]) +
+      theme_bw() +
+      theme(text = element_text(size = 24)) +
+      xlab(TeX(par.names.plot[col])) + ylab("LL")
+    g
+  }
+  
+  unfixed <- which(fixed == 0)
+  lapply(unfixed, profile_likelihood)
+}
