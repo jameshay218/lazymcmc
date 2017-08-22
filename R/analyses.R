@@ -66,11 +66,11 @@ calculate_AIC <- function(chain, parTab){
 #' @param range a numeric vector of length 1 indicating the range over which to
 #' scan in 1D parameter space for each profile (so we go range/2 on each side of
 #' the central value)
-#' @param par.names.plot a character vector of length m to label the horizontal
+#' @param par_names_plot a character vector of length m to label the horizontal
 #' axes of the profile plots
 #' @return a list of ggplot objects containing the profile likelihood plots
 #' @export 
-profile_likelihood_all <- function(stuck_values, f, fixed, n_values, range, par.names.plot){
+profile_likelihood_all <- function(stuck_values, f, fixed, n_values, range, par_names_plot){
   f_lik <- function(pars){
     out <- f(pars)
     if(is.atomic(out)){
@@ -95,7 +95,7 @@ profile_likelihood_all <- function(stuck_values, f, fixed, n_values, range, par.
       geom_vline(xintercept = stuck_values[col]) +
       theme_bw() +
       theme(text = element_text(size = 24)) +
-      xlab(TeX(par.names.plot[col])) + ylab("LL")
+      xlab(TeX(par_names_plot[col])) + ylab("LL")
     g
   }
   

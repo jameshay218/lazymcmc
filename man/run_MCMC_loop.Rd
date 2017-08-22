@@ -5,14 +5,15 @@
 \title{Wrapper to run multiple parallel MCMC chains until convergence}
 \usage{
 run_MCMC_loop(startTab, data, mcmcPars, filenames, CREATE_POSTERIOR_FUNC,
-  PRIOR_FUNC, run.parallel = FALSE)
+  mvrPars, PRIOR_FUNC, run_parallel = FALSE)
 }
 \arguments{
 \item{startTab}{the parameter table controlling information 
 such as bounds, initial values etc.
 Because the different chains have different initial values, this is a list 
 where each element is of the form of parTab in run_MCMC, but the
-values column has different starting values}
+values column has different starting values.
+startTab is acutally a list of n of these where n is the number of parallel chains}
 
 \item{data}{the data frame of data to be fitted}
 
@@ -31,10 +32,15 @@ calculate a likelihood. See the main example -
 this should return your likelihood function (that only takes a single vector 
 of parameters as an argument).}
 
+\item{mvrPars}{a list of parameters if using a multivariate proposal. 
+Must contain an initial covariance matrix, weighting for adapting cov matrix,
+ and an initial scaling parameter (0-1)
+mvrPars is acutally a list of n of these where n is the number of parallel chains}
+
 \item{PRIOR_FUNC}{user function of prior for model parameters. 
 Should take values, names and local from param_table}
 
-\item{run.parallel}{logical vector og length 1. If TRUE, run in parallel on cluster}
+\item{run_parallel}{logical vector of length 1. If TRUE, run in parallel on cluster}
 }
 \value{
 a list with: 1) convergence diagnostics; 2) the output from run_MCMC
