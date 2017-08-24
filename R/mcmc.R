@@ -418,7 +418,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
       output_write <- lapply(output_write, function(x) x[-seed_idx])
       lapply(1:n_replicates, 
              function(x) write_list(output_write[[x]],
-                                    paste0(filenames[x],".out"),
+                                    paste0(filenames[x],".output"),
                                     overwrite = (total_iterations == 0)))
       
       ## can't calculate convergence diagnostics if only one replicate run,

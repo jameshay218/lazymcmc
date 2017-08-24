@@ -102,3 +102,25 @@ profile_likelihood_all <- function(stuck_values, f, fixed, n_values, range, par_
   unfixed <- which(fixed == 0)
   lapply(unfixed, profile_likelihood)
 }
+
+#' calculate percentiles for fitted parameters
+#' 
+#' calculate percentiles for fitted parameters
+#' 
+#' @param chain the MCMC chain: a data frame with n columns, where n is the number
+#' of fitted parameters
+#' @param prctiles a numeric vector of length m containing the percentiles to be calculated
+#' (between 0 and 1)
+#' @param par_names_plot parameter names for the output data frame
+#' @return a data frame with n rows and m columns containing the percentiles
+#' @export 
+print_prctiles <- function(chain, prctiles = c(.025,.5,.975), par_names_plot){
+  prctile_table <- lapply(chain,function(x) quantile(x,prctiles))
+  prctile_table <- t(as.data.frame(prctile_table))
+  rownames(prctile_table) <- par_names_plot
+  col_names <- as.character(prctiles*100)
+  col_names <- trimws(format(col_names, digits = 3))
+  col_names <- paste0(col_names,"\\%")
+  colnames(prctile_table) <- col_names
+  prctile_table
+}
