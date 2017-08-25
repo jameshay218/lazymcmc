@@ -468,9 +468,9 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
   write(timing,paste0(filenames[1],".time"))
   
   # write diagnostics to file
-  write_list(diagnostics,
+  dump("diagnostics",
              paste0(filenames[1],".diagnostics"),
-             overwrite = 1)
+             append = FALSE)
   list("diagnostics" = diagnostics, "output" = output)
 }
 
