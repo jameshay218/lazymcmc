@@ -416,10 +416,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
       output_write <- output_current
       seed_idx <- which(names(output_write[[1]]) == "seed")
       output_write <- lapply(output_write, function(x) x[-seed_idx])
-      lapply(1:n_replicates, 
-             function(x) write_list(output_write[[x]],
-                                    paste0(filenames[x],".output"),
-                                    overwrite = (total_iterations == 0)))
+      dump("output_write", paste0(filenames[1],".output"), append = (total_iterations > 0))
       
       ## can't calculate convergence diagnostics if only one replicate run,
       ## so stop running here
@@ -558,24 +555,4 @@ calc_diagnostics <- function(filenames,check_freq,fixed,skip = 0){
        "max_psrf" = max_psrf,
        "burn_in" = burn_in,
        "combined_size" = combined_size)
-}
-
-#' writes a list to a text file
-#' 
-#' writes a list to a text file
-#' 
-#' doesn't work for lists of lists
-#' @param list_to_write: list to write to file
-#' @param filename: character vector of length 1: filename to write to
-#' @return NULL
-write_list <- function(list_to_write,filename,overwrite){
-  if(any(sapply(list_to_write,is.list))){
-    stop("error: write_list does not work for lists of lists")
-  }
-  if(file.exists(filename) && overwrite){
-    warning(paste0("overwriting ",filename))
-    file.remove(filename)
-  }
-  lapply(list_to_write, write, filename, append=TRUE, ncolumns=1000, sep = ",")
-  invisible(NULL)
 }

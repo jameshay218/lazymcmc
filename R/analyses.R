@@ -63,14 +63,14 @@ calculate_AIC <- function(chain, parTab){
 #' fixed (1) or fitted (0)
 #' @param n_values a numeric vector of length 1 indicating the number of points 
 #' to scan over in 1D parameter space for each profile. Must take an integer value.
-#' @param range a numeric vector of length 1 indicating the range over which to
-#' scan in 1D parameter space for each profile (so we go range/2 on each side of
+#' @param span a numeric vector of length 1 indicating the span over which to
+#' scan in 1D parameter space for each profile (so we go span/2 on each side of
 #' the central value)
 #' @param par_names_plot a character vector of length m to label the horizontal
 #' axes of the profile plots
 #' @return a list of ggplot objects containing the profile likelihood plots
 #' @export 
-profile_likelihood_all <- function(stuck_values, f, fixed, n_values, range, par_names_plot){
+profile_likelihood_all <- function(stuck_values, f, fixed, n_values, span, par_names_plot){
   f_lik <- function(pars){
     out <- f(pars)
     if(is.atomic(out)){
@@ -86,8 +86,8 @@ profile_likelihood_all <- function(stuck_values, f, fixed, n_values, range, par_
   colnames(stuck_values_df) <- par_names
   
   profile_likelihood <- function(col){
-    stuck_values_df[,col] <- seq(stuck_values_df[1,col] - range / 2,
-                                 stuck_values_df[1,col] + range / 2, 
+    stuck_values_df[,col] <- seq(stuck_values_df[1,col] - span / 2,
+                                 stuck_values_df[1,col] + span / 2, 
                                  length.out = n_values)
     stuck_values_df$lnlike <- apply(stuck_values_df,1,f_lik)
     g <- ggplot(stuck_values_df,aes_string(x = par_names[col], y = "lnlike"))
