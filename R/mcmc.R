@@ -43,8 +43,6 @@ run_MCMC <- function(parTab,
     } else {
       temperature <- 1
     }
-    temperature
-    return
 
     ## added functionality by ada-w-yan: adjusting adaptive period depending on 
     ## the acceptance ratio.  If acceptance ratio within the last opt_freq 
@@ -201,7 +199,7 @@ run_MCMC <- function(parTab,
          
             ## Accept with probability 1 if better, or proportional to
             ## difference if not
-            if(is.finite(log_prob) && log(runif(1)) < log_prob*temperature){
+            if(is.finite(log_prob) && log(runif(1)) < log_prob/temperature){
                 current_pars <- proposal
                 probab <- new_probab
                 misc <- new_misc
