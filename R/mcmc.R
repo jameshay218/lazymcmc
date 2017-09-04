@@ -38,6 +38,13 @@ run_MCMC <- function(parTab,
     adaptive_period<- mcmcPars[["adaptive_period"]]
     adaptive_period_init <- adaptive_period
     save_block <- mcmcPars[["save_block"]]
+    if("temperature" %in% names(mcmcPars)){
+      temperature <- mcmcPars[["temperature"]]
+    } else {
+      temperature <- 1
+    }
+    temperature
+    return
 
     ## added functionality by ada-w-yan: adjusting adaptive period depending on 
     ## the acceptance ratio.  If acceptance ratio within the last opt_freq 
@@ -194,7 +201,7 @@ run_MCMC <- function(parTab,
          
             ## Accept with probability 1 if better, or proportional to
             ## difference if not
-            if(is.finite(log_prob) && log(runif(1)) < log_prob){
+            if(is.finite(log_prob) && log(runif(1)) < log_prob*temperature){
                 current_pars <- proposal
                 probab <- new_probab
                 misc <- new_misc
@@ -379,12 +386,14 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
         output_current <- parLapply(cl = NULL,1:n_replicates, 
                                  function(x) run_MCMC(startTab_current[[x]], data, mcmcPars, 
                                                       filenames.current[x], CREATE_POSTERIOR_FUNC, 
-                                                      mvrPars[[x]], PRIOR_FUNC = PRIOR_FUNC  ,0.1, seed = seed[[x]]))
+                                                      mvrPars[[x]], PRIOR_FUNC = PRIOR_FUNC,
+                                                      0.1, seed = seed[[x]]))
     } else{
       output_current <- lapply(1:n_replicates, 
                                function(x) run_MCMC(startTab_current[[x]], data, mcmcPars, 
                                                     filenames.current[x], CREATE_POSTERIOR_FUNC, 
-                                                    mvrPars[[x]], PRIOR_FUNC = PRIOR_FUNC  ,0.1, seed = seed[[x]]))
+                                                    mvrPars[[x]], PRIOR_FUNC = PRIOR_FUNC,
+                                                    0.1, seed = seed[[x]]))
     }
 
       # if first time running
