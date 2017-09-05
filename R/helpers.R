@@ -88,6 +88,12 @@ mcmc_param_check <- function(mcmcPars, mvrPars){
             errors <- list(errors, "Error in mvrPars - list should have 3 elements")
         }
     }
+    
+    if("parallel_tempering_iter" %in% names(mcmcPars) && 
+       (!("temperature" %in% names(mcmcPars)) || length(mcmcPars[["temperature"]] < 2))){
+      errors <- list(errors, "insufficient number of temperatures specified for parallel tempering")
+    }
+    
     if(length(errors) > 1) errors[[1]] <- TRUE
     return(errors)
 }
