@@ -253,7 +253,7 @@ run_MCMC <- function(parTab,
     ## save this block of chain to file and reset chain
     if(i %% thin ==0){
       current_pars <- mcmc_list[[1]][["current_pars"]]
-      probab <- mcmc_list[[1]][["current_pars"]]
+      probab <- mcmc_list[[1]][["probab"]]
       misc <- mcmc_list[[1]][["misc"]]
       
       save_chain[no_recorded,1] <- sampno
