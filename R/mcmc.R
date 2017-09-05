@@ -96,8 +96,8 @@ run_MCMC <- function(parTab,
     scale <- mvrPars[[2]]
     w <- mvrPars[[3]]
     covMat <- rep(list(covMat),length(temperatures))
-    scale <- rep(list(scale),length(temperatures))
-    w <- rep(list(w),length(temperatures))
+    scale <- rep(scale,length(temperatures))
+    reset <- 0
   }
   
   posterior_simp <- protect(CREATE_POSTERIOR_FUNC(parTab,data, 
@@ -239,8 +239,8 @@ run_MCMC <- function(parTab,
                                  function(x) create_run_MCMC_single_iter_fn
                                  (unfixed_pars,unfixed_par_length,
                                  lower_bounds,upper_bounds,
-                                   steps[[x]],scale[[x]],
-                                   covMat[[x]],mvrPars[[x]],temperatures[x]))
+                                   steps[[x]],scale[x],
+                                   covMat[[x]],mvrPars,temperatures[x]))
   
   mcmc_list <- list("par_i" = par_i, "current_pars" = current_pars,
                     "misc" = misc, "probab" = probab, "tempaccepted" = tempaccepted,
@@ -291,6 +291,12 @@ run_MCMC <- function(parTab,
       opt_chain <- Map(function(x,y) save_opt_chain(x,y,unfixed_pars,chain_index),opt_chain,mcmc_list)
       ## If in an adaptive step
       if(chain_index %% opt_freq == 0){
+        
+        reset_acceptance <- function(mcmc_list, reset){
+          mcmc_list[["tempaccepted"]] <- mcmc_list[["tempiter"]] <- reset
+          mcmc_list
+        }
+        
         ## If using univariate proposals
         if(is.null(mvrPars)){
           
@@ -309,28 +315,32 @@ run_MCMC <- function(parTab,
           message(cat("Pcur: ", pcur[[1]][unfixed_pars],sep="\t"))
           message(cat("Step sizes: ", steps[[1]][unfixed_pars],sep="\t"))
           
-          reset_acceptance <- function(mcmc_list, reset){
-            mcmc_list[["tempaccepted"]] <- mcmc_list[["tempiter"]] <- reset
-            mcmc_list
+          mcmc_list <- lapply(mcmc_list, function(x) reset_acceptance(x, reset))
+          
+        } else {       ## If using multivariate proposals
+          pcur <- sapply(mcmc_list, function(x) x[["tempaccepted"]] / x[["tempiter"]])
+          if(chain_index > OPT_TUNING*adaptive_period & chain_index < (0.8*adaptive_period)){
+            
+            scale_mvr <- function(opt_chain,covMat,w,chain_index){
+              oldCovMat <- covMat
+              ## Creates a new covariance matrix, but weights it with the old one
+              covMat <- cov(opt_chain[1:chain_index,])
+              covMat <- w*covMat + (1-w)*oldCovMat
+              covMat
+            }
+            
+            covMat <- Map(function(x,y) scale_mvr(x,y,w,chain_index), opt_chain, covMat)
+          }
+          ## Scale tuning for last 20% of the adpative period
+          if(chain_index > (0.8)*adaptive_period){
+            scale <- Map(function(x,y) scaletuning(x, popt,y), scale, pcur)
+            scale <- unlist(scale)
           }
           
           mcmc_list <- lapply(mcmc_list, function(x) reset_acceptance(x, reset))
           
-        } else {       ## If using multivariate proposals
-          if(chain_index > OPT_TUNING*adaptive_period & chain_index < (0.8*adaptive_period)){
-            oldCovMat <- covMat
-            ## Creates a new covariance matrix, but weights it with the old one
-            covMat <- cov(opt_chain[1:chain_index,])
-            covMat <- w*covMat + (1-w)*oldCovMat
-          }
-          ## Scale tuning for last 20% of the adpative period
-          if(chain_index > (0.8)*adaptive_period){
-            scale <- scaletuning(scale, popt,pcur)
-          }
-          tempiter <- tempaccepted <- 0
-          
-          message(cat("Pcur: ", pcur,sep="\t"))
-          message(cat("Scale: ", scale,sep="\t"))
+          message(cat("Pcur: ", pcur[1],sep="\t"))
+          message(cat("Scale: ", scale[1],sep="\t"))
         }
       }
       chain_index <- chain_index + 1
@@ -338,8 +348,8 @@ run_MCMC <- function(parTab,
                                      function(x) create_run_MCMC_single_iter_fn
                                      (unfixed_pars,unfixed_par_length,
                                        lower_bounds,upper_bounds,
-                                       steps[[x]],scale[[x]],
-                                       covMat[[x]],mvrPars[[x]],temperatures[x]))
+                                       steps[[x]],scale[x],
+                                       covMat[[x]],mvrPars,temperatures[x]))
     }
     
     ## added functionality by ada-w-yan
