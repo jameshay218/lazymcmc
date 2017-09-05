@@ -43,6 +43,11 @@ run_MCMC <- function(parTab,
   } else {
     temperature <- 1
   }
+  if("parallel_tempering_iter" %in% names(mcmcPars)){
+    parallel_tempering_iter <- mcmcPars[["parallel_tempering_iter"]]
+  } else {
+    parallel_tempering_iter <- Inf
+  }
   
   ## added functionality by ada-w-yan: adjusting adaptive period depending on 
   ## the acceptance ratio.  If acceptance ratio within the last opt_freq 
@@ -151,6 +156,7 @@ run_MCMC <- function(parTab,
   i <- 1
   pcurUnfixed <- -1
   p_accept_adaptive <- NA
+  offset <- 0
   
   ## set seed
   if(!missing(seed)){
@@ -167,7 +173,7 @@ run_MCMC <- function(parTab,
   create_run_MCMC_single_iter_fn <- function(unfixed_pars,unfixed_par_length,
                                              lower_bounds,upper_bounds,steps,scale,
                                              covMat,mvrPars){
-    f <- function(par_i,current_pars,probab,tempaccepted,tempiter){
+    f <- function(par_i,current_pars,misc,probab,tempaccepted,tempiter,temperature){
       ## If using univariate proposals
       if(is.null(mvrPars)) {
         ## For each parameter (Gibbs)
@@ -216,8 +222,9 @@ run_MCMC <- function(parTab,
         }
       }
       list("par_i" = par_i, "current_pars" = current_pars,
+           "misc" = misc,
            "probab" = probab, "tempaccepted" = tempaccepted,
-           "tempiter" = tempiter)
+           "tempiter" = tempiter,"temperature"=temperature)
     }
     f
   }
@@ -225,21 +232,30 @@ run_MCMC <- function(parTab,
   run_MCMC_single_iter <- create_run_MCMC_single_iter_fn(unfixed_pars,unfixed_par_length,
                                                          lower_bounds,upper_bounds,steps,scale,
                                                          covMat,mvrPars)
+  mcmc_list <- list("par_i" = par_i, "current_pars" = current_pars,
+                    "misc" = misc, "probab" = probab, "tempaccepted" = tempaccepted,
+                    "tempiter" = tempiter)
+  mcmc_list <- rep(list(mcmc_list),length(temperature))
+  mcmc_list <- lapply(seq_along(temperature), function(x) c(mcmc_list[[x]], list("temperature" = temperature[x])))
   
   while (i <= (iterations+adaptive_period)){
     
-    list_out <- run_MCMC_single_iter(par_i,current_pars,probab,tempaccepted,tempiter)
-    par_i <- list_out[[1]]
-    current_pars <- list_out[[2]]
-    probab <- list_out[[3]]
-    tempaccepted <- list_out[[4]]
-    tempiter <- list_out[[5]]
+    mcmc_list <- lapply(mcmc_list,function(x) do.call(run_MCMC_single_iter,x))
     
+    # perform parallel tempering
     
+    if(i %% parallel_tempering_iter == 0){
+      mcmc_list <- parallel_tempering(mcmc_list,offset)
+      offset <- 1 - offset
+    }
     
     ## If current iteration matches with recording frequency, store in the chain. If we are at the limit of the save block,
     ## save this block of chain to file and reset chain
     if(i %% thin ==0){
+      current_pars <- mcmc_list[[1]][["current_pars"]]
+      probab <- mcmc_list[[1]][["current_pars"]]
+      misc <- mcmc_list[[1]][["misc"]]
+      
       save_chain[no_recorded,1] <- sampno
       save_chain[no_recorded,2:(ncol(save_chain)-1-misc_length)] <- current_pars
       if(misc_length > 0){
@@ -253,6 +269,8 @@ run_MCMC <- function(parTab,
     
     ## If within adaptive period, need to do some adapting!
     if(i <= adaptive_period){
+      tempaccepted <- mcmc_list[[1]][["tempaccepted"]]
+      tempiter <- mcmc_list[[1]][["tempiter"]]
       ## Current acceptance rate
       pcur <- tempaccepted/tempiter
       ## Save each step
@@ -585,4 +603,49 @@ calc_diagnostics <- function(filenames,check_freq,fixed,skip = 0){
        "max_psrf" = max_psrf,
        "burn_in" = burn_in,
        "combined_size" = combined_size)
+}
+
+#' performs parallel tempering
+#' 
+#' @param mcmc_list_in a list of lists: values, log likelihood etc. of parallel MCMC chains
+#' @param offset integer: 0 or 1. 0 = swap chains 1 <-> 2, 3 <-> 4...
+#' 1 = swap chains 2<->3, 4<->5...
+#' 
+#' @return a list of lists: values, log likelihood etc. of paralle chains after parallel tempering
+#' @export
+parallel_tempering <- function(mcmc_list_in, offset){
+  
+  mcmc_list_out <- mcmc_list_in
+  probabs <- sapply(mcmc_list_in, function(x) x$probab)
+  if((offset + 1) <= (length(mcmc_list_in) - 1)){
+    swap_ind <- seq(offset + 1, length(mcmc_list_in) - 1, by = 2)
+    temperatures <- sapply(mcmc_list_in, function(x) x$temperature)
+    
+    decide_if_swap <- function(x,y){
+      delta <- (1 / temperatures[y] - 1 / temperatures[x]) *
+        (probabs[x] - probabs[y])
+      runif(1) <= exp(delta)
+    }
+    
+    swaps <- sapply(swap_ind,function(x) decide_if_swap(x,x+1))
+    
+    perform_swap <- function(mcmc_list_in, swap, swap_ind){
+      mcmc_list <- mcmc_list_in[c(swap_ind, swap_ind + 1)]
+      if(swap){
+        mcmc_list_out <- mcmc_list
+        mcmc_list_out[[1]][["probab"]] <- mcmc_list[[2]][["probab"]]
+        mcmc_list_out[[2]][["probab"]] <- mcmc_list[[1]][["probab"]]
+        mcmc_list_out[[1]][["current_pars"]] <- mcmc_list[[2]][["current_pars"]]
+        mcmc_list_out[[2]][["current_pars"]] <- mcmc_list[[1]][["current_pars"]]
+        mcmc_list_out
+      } else {
+        mcmc_list
+      }
+    }
+    
+    mcmc_list_out <- Map(function(x,y) perform_swap(mcmc_list_in,x,y),
+                         swaps,swap_ind)
+    mcmc_list_out <- unname(unlist(mcmc_list_out, recursive = FALSE))
+  }
+  mcmc_list_out
 }

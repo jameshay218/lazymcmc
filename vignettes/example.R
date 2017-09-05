@@ -42,8 +42,9 @@ my_prior <- function(pars){
   return(a + b)
 }
 
-mcmcPars <- c("iterations"=10000,"popt"=0.44,"opt_freq"=1000,
-              "thin"=1,"adaptive_period"=5000,"save_block"=100)
+mcmcPars <- list("iterations"=10000,"popt"=0.44,"opt_freq"=1000,
+              "thin"=1,"adaptive_period"=5000,"save_block"=100,"temperature" = c(1,5),
+              "parallel_tempering_iter" = 10)
 
 startTab <- parTab
 startTab$values <- c(3.5,1)
