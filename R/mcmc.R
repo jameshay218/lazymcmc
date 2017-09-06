@@ -488,24 +488,17 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
     mcmcPars <- c(mcmcPars, "max_total_iterations" = mcmcPars[["iterations"]])
   }
   
-  seed <- lapply(1:n_replicates, function(x) x)
+  seed <- lapply(seq_len(n_replicates), function(x) x)
   
   timing <- system.time(
     while(!diagnostics$converged && total_iterations < mcmcPars[["max_total_iterations"]]){
+      
       ## run MCMC for random starting values
-      if(run_parallel){
-        output_current <- parLapply(cl = NULL,1:n_replicates, 
-                                    function(x) run_MCMC(startTab_current[[x]], data, mcmcPars, 
-                                                         filenames.current[x], CREATE_POSTERIOR_FUNC, 
-                                                         mvrPars[[x]], PRIOR_FUNC = PRIOR_FUNC,
-                                                         0.1, seed = seed[[x]]))
-      } else{
-        output_current <- lapply(1:n_replicates, 
-                                 function(x) run_MCMC(startTab_current[[x]], data, mcmcPars, 
-                                                      filenames.current[x], CREATE_POSTERIOR_FUNC, 
-                                                      mvrPars[[x]], PRIOR_FUNC = PRIOR_FUNC,
-                                                      0.1, seed = seed[[x]]))
-      }
+      output_current <- parLapply_wrapper(run_parallel,1:n_replicates, 
+                                  function(x) run_MCMC(startTab_current[[x]], data, mcmcPars, 
+                                                       filenames.current[x], CREATE_POSTERIOR_FUNC, 
+                                                       mvrPars[[x]], PRIOR_FUNC = PRIOR_FUNC,
+                                                       0.1, seed = seed[[x]]))
       
       # if first time running
       if(total_iterations == 0){
@@ -720,4 +713,18 @@ parallel_tempering <- function(mcmc_list_in, temperatures, offset){
     mcmc_list_out <- unname(unlist(mcmc_list_out, recursive = FALSE))
   }
   mcmc_list_out
+}
+
+#' wrapper for parLapply for cluster
+#'
+#' @param run_parallel: logical: if TRUE, use parLapply, else use lapply
+#' @param x first argument of lapply
+#' @param fun second argument of lapply
+#' @return output arguments of lapply
+parLapply_wrapper <- function(run_parallel,x,fun,...){
+  if(run_parallel){
+    parLapply(cl = NULL, x, fun, ...)
+  } else {
+    lapply(x, fun, ...)
+  }
 }
