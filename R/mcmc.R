@@ -21,9 +21,17 @@ run_MCMC <- function(parTab,
                      OPT_TUNING=0.2,
                      seed,
                      ...){
+  
   ## check that input parameters are correctly formatted
-  parTab_check <- lazymcmc::param_table_check(parTab)
-  if(parTab_check[[1]] == TRUE) return(parTab_check[[2]])
+  if(is.list(parTab[[1]])){ # if parallel tempering
+    parTab_check <- lapply(parTab,lazymcmc::param_table_check)
+    parTab_check_flag <- unlist(lapply(parTab_check, function(x) x[[1]]))
+    if(any(parTab_check_flag)) return(parTab_check[[which(parTab_check_flag)[1]]][[2]])
+  } else {
+    parTab_check <- lazymcmc::param_table_check(parTab)
+    if(parTab_check[[1]] == TRUE) return(parTab_check[[2]])
+  }
+
   mcmcPar_check <- lazymcmc::mcmc_param_check(mcmcPars, mvrPars)
   if(mcmcPar_check[[1]] == TRUE) return(mcmcPar_check[[2]])
   
@@ -70,11 +78,20 @@ run_MCMC <- function(parTab,
   poptRange <- pmax(0,poptRange)
   poptRange <- pmin(1,poptRange)
   
+  if(length(temperatures) == 1){ # only one set of starting values
+    current_pars <- parTab$values
+  } else {
+    current_pars <- parTab[[1]]$values
+    # store starting values for parallel chains
+    start_pars <- lapply(parTab, function(x) x$values) 
+    parTab <- parTab[[1]]
+  }
+  
   param_length <- nrow(parTab)
   
   unfixed_pars <- which(parTab$fixed == 0)
   unfixed_par_length <- nrow(parTab[parTab$fixed== 0,])
-  current_pars <- parTab$values
+  
   par_names <- as.character(parTab$names)
   
   ## Parameter constraints
@@ -242,11 +259,17 @@ run_MCMC <- function(parTab,
                                    steps[[x]],scale[x],
                                    covMat[[x]],mvrPars,temperatures[x]))
   
+  # initialise MCMC
   mcmc_list <- list("par_i" = par_i, "current_pars" = current_pars,
                     "misc" = misc, "probab" = probab, "tempaccepted" = tempaccepted,
                     "tempiter" = tempiter)
   
+  # replicate list for parallel tempering
   mcmc_list <- rep(list(mcmc_list),length(temperatures))
+  # start values for parallel tempering
+  mcmc_list <- Map(function(x,y) modifyList(x,list(current_pars = y)), mcmc_list, start_pars)
+
+  # main body of running MCMC
   
   while (i <= (iterations+adaptive_period)){
 
@@ -344,6 +367,8 @@ run_MCMC <- function(parTab,
         }
       }
       chain_index <- chain_index + 1
+      
+      # remake run_MCMC_single_iter for new step sizes
       run_MCMC_single_iter <- lapply(seq_along(temperatures),
                                      function(x) create_run_MCMC_single_iter_fn
                                      (unfixed_pars,unfixed_par_length,

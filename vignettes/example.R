@@ -52,6 +52,8 @@ mvrPars <- list(covMat,2.38/sqrt(n_row_covMat),w=0.8)
 
 startTab <- parTab
 startTab$values <- c(3.5,1)
+startTab <- rep(list(startTab),2)
+startTab[[2]]$values <- c(3,4)
 
 output <- run_MCMC(parTab=startTab, data=data, mcmcPars=mcmcPars, filename="test", 
                    CREATE_POSTERIOR_FUNC=my_creation_function, mvrPars=mvrPars, 
