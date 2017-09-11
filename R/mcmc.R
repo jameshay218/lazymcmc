@@ -483,7 +483,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
   diagnostics <- list(converged = FALSE)
   startTab_current <- startTab
   total_iterations <- 0
-  filenames.current <- filenames
+  filenames_current <- filenames
   if(!("max_total_iterations" %in% names(mcmcPars))){
     mcmcPars <- c(mcmcPars, "max_total_iterations" = mcmcPars[["iterations"]])
   }
@@ -494,9 +494,9 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
     while(!diagnostics$converged && total_iterations < mcmcPars[["max_total_iterations"]]){
       
       ## run MCMC for random starting values
-      output_current <- parLapply_wrapper(run_parallel,1:n_replicates, 
+      output_current <- parLapply_wrapper(run_parallel,seq_along(n_replicates), 
                                   function(x) run_MCMC(startTab_current[[x]], data, mcmcPars, 
-                                                       filenames.current[x], CREATE_POSTERIOR_FUNC, 
+                                                       filenames_current[x], CREATE_POSTERIOR_FUNC, 
                                                        mvrPars[[x]], PRIOR_FUNC = PRIOR_FUNC,
                                                        0.1, seed = seed[[x]]))
       
@@ -572,7 +572,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
         mvrPars <- lapply(output_current, make_new_mvrPars)
       }
       
-      filenames.current <- paste0(filenames,"_new")
+      filenames_current <- paste0(filenames,"_new")
       seed <- lapply(output_current, function(x) x$seed)
     }
   )
