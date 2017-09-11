@@ -481,6 +481,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
                           CREATE_POSTERIOR_FUNC, 
                           mvrPars, PRIOR_FUNC, run_parallel = FALSE){
 message("temp_commit")
+  return(3)
   n_replicates <- length(filenames)
   n_pars <- nrow(startTab[[1]])
   diagnostics <- list(converged = FALSE)
