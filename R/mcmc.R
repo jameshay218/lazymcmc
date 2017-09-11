@@ -480,198 +480,198 @@ run_MCMC <- function(parTab,
 run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,  
                           CREATE_POSTERIOR_FUNC, 
                           mvrPars, PRIOR_FUNC, run_parallel = FALSE){
-#' 
-#'   n_replicates <- length(filenames)
-#'   n_pars <- nrow(startTab[[1]])
-#'   diagnostics <- list(converged = FALSE)
-#'   startTab_current <- startTab
-#'   total_iterations <- 0
-#'   filenames_current <- filenames
-#'   if(!("max_total_iterations" %in% names(mcmcPars))){
-#'     mcmcPars <- c(mcmcPars, "max_total_iterations" = mcmcPars[["iterations"]])
-#'   }
-#'   
-#'   seed <- lapply(seq_len(n_replicates), function(x) x)
-#'   
-#'   timing <- system.time(
-#'     while(!diagnostics$converged && total_iterations < mcmcPars[["max_total_iterations"]]){
-#'       
-#'       ## run MCMC for random starting values
-#'       output_current <- parLapply_wrapper(run_parallel,seq_along(n_replicates), 
-#'                                   function(x) run_MCMC(startTab_current[[x]], data, mcmcPars, 
-#'                                                        filenames_current[x], CREATE_POSTERIOR_FUNC, 
-#'                                                        mvrPars[[x]], PRIOR_FUNC = PRIOR_FUNC,
-#'                                                        0.1, seed = seed[[x]]))
-#'       
-#'       # if first time running
-#'       if(total_iterations == 0){
-#'         output <- output_current
-#'         # get current parameters
-#'         current_pars <- lapply(output, function(x) data.table::fread(x$file))
-#'         current_pars <- lapply(current_pars, function(x) as.numeric(x[nrow(x),2:(n_pars+1)]))
-#'       } else {
-#'         # append the new output file
-#'         append.csv <- function(x){
-#'           # read new output file
-#'           temp <- data.table::fread(output_current[[x]]$file)
-#'           temp <- temp[2:nrow(temp),]
-#'           # renumber samples to continue from old file
-#'           temp$sampno <- (1:nrow(temp))*mcmcPars[["thin"]] + (output[[x]]$adaptive_period + total_iterations + 1)
-#'           current_pars <- as.numeric(temp[nrow(temp),2:(n_pars+1)])
-#'           # append to old file
-#'           write.table(temp, output[[x]]$file,
-#'                       row.names=FALSE,col.names=FALSE,sep=",",append=TRUE)
-#'           # delete cont file
-#'           file.remove(output_current[[x]]$file)
-#'           invisible(current_pars)
-#'         }
-#'         current_pars <- lapply(1:n_replicates,append.csv)
-#'       }
-#'       
-#'       # write output e.g. step size to file
-#'       output_write <- output_current
-#'       seed_idx <- which(names(output_write[[1]]) == "seed")
-#'       output_write <- lapply(output_write, function(x) x[-seed_idx])
-#'       dump("output_write", paste0(filenames[1],".output"), append = (total_iterations > 0))
-#'       
-#'       ## can't calculate convergence diagnostics if only one replicate run,
-#'       ## so stop running here
-#'       if(n_replicates == 1){
-#'         diagnostics$converged <- TRUE
-#'         diagnostics$burn_in <- mcmcPars["iterations"]/2
-#'       } else {
-#'         ## calculate convergence diagnostics
-#'         diagnostics <- calc_diagnostics(filenames = sapply(output, function(x) x$file),
-#'                                         check_freq = floor(mcmcPars[["iterations"]]/10/mcmcPars[["thin"]]),
-#'                                         fixed = startTab[[1]]$fixed,
-#'                                         skip = sapply(output, function(x) floor(x$adaptive_period/mcmcPars[["thin"]])))
-#'       }
-#'       
-#'       total_iterations <- total_iterations + mcmcPars[["iterations"]]
-#'       
-#'       ## get things ready to run again if it hasn't converged
-#'       
-#'       
-#'       
-#'       mcmcPars["adaptive_period"] <- 0
-#'       
-#'       if(is.null(mvrPars)){
-#'         startTab_current <- lapply(1:n_replicates,
-#'                                    function(x) cbind(data.frame(values = current_pars[[x]]),
-#'                                                      startTab[[1]][c("names","fixed","lower_bound","upper_bound")],
-#'                                                      data.frame(steps = output_current[[x]]$steps)))
-#'       } else {
-#'         startTab_current <- lapply(1:n_replicates,
-#'                                    function(x) cbind(data.frame(values = current_pars[[x]]),
-#'                                                      startTab[[1]][c("names","fixed","lower_bound","upper_bound","steps")]))
-#'         
-#'         make_new_mvrPars <- function(output){
-#'           covMat_expand <- diag(nrow(startTab[[1]]))
-#'           unfixed <- which(startTab[[1]]$fixed == 0)
-#'           covMat_expand[unfixed,unfixed] <- output$covMat
-#'           list(covMat_expand, output$scale, w = mvrPars[[1]]$w)
-#'         }
-#'         
-#'         mvrPars <- lapply(output_current, make_new_mvrPars)
-#'       }
-#'       
-#'       filenames_current <- paste0(filenames,"_new")
-#'       seed <- lapply(output_current, function(x) x$seed)
-#'     }
-#'   )
-#'   
-#'   # write elapsed time to file
-#'   write(timing,paste0(filenames[1],".time"))
-#'   
-#'   # write diagnostics to file
-#'   dump("diagnostics",
-#'        paste0(filenames[1],".diagnostics"),
-#'        append = FALSE)
-#'   list("diagnostics" = diagnostics, "output" = output)
-#' }
-#' 
-#' #' see whether MCMC chains have converged; if so, calculate effective sample size and burn-in
-#' #' 
-#' #' see whether MCMC chains have converged; if so, calculate effective sample size and burn-in
-#' #' 
-#' #' @param filenames character vector of filenames, each corresponding to one csv
-#' #' file outputted by run_MCMC
-#' #' @param check_freq: check whether convergence has occurred every check_freq iterations
-#' #' along the chain
-#' #' @param fixed: logical vector: vector whose entries are TRUE if the corresponding
-#' #' parameter is fixed, FALSE if the parameter is fitted. i.e. parTab$fixed
-#' #' @param skip: numeric vector either of length 1 or of same length as filenames: 
-#' #' skip this many entries from the start of each csv file
-#' #' @return if convergence has occurred, return a list with the elements
-#' #' converged: logical = TRUE
-#' #' burn_in: the number of burn-in iterations
-#' #' combined_size: effective sample size combined across chains
-#' #' if convergence has not occurred, return a list with the element
-#' #' converged: logical = FALSE
-#' #' max.prsf:maximum value of potential scale reduction factor across parameters
-#' #' @export
-#' calc_diagnostics <- function(filenames,check_freq,fixed,skip = 0){
-#'   
-#'   ## replicate skip value if more than one filename given but only one skip value given
-#'   if(length(skip) == 1){
-#'     skip <- rep(skip, length(filenames))
-#'   }
-#'   ## check if number of skip values equal to number of filenames
-#'   if(length(skip) != length(filenames)){
-#'     stop("input vector filenames different length to input vector skip")
-#'   }
-#'   data <- lapply(filenames,function(x) data.table::fread(x))
-#'   
-#'   # discard parameters which are fixed
-#'   data <- lapply(1:length(data),function(x) data[[x]][(skip[x]+1):nrow(data[[x]]),2:(length(fixed)+1)])
-#'   # data <- lapply(data,function(x) x[(skip+1):nrow(x),2:(length(fixed)+1)])
-#'   
-#'   data <- lapply(data,function(x) x[,!as.logical(fixed),drop = FALSE, with = FALSE])
-#'   # determine length of shortest chain
-#'   min_length <- min(sapply(data,function(x)dim(x)[1]))
-#'   # if prsf for all parameters below threshold, converged
-#'   thres = 1.1
-#'   # calculate potential scale reduction factor
-#'   # note: discards first half of chain as default
-#'   
-#'   max_psrf <- numeric()
-#'   for (k in seq(check_freq,min_length,check_freq)){
-#'     
-#'     data_temp <- lapply(data,function(x)x[1:k,])
-#'     data_temp <- lapply(data_temp,mcmc)
-#'     combinedchains <- mcmc.list(data_temp)
-#'     
-#'     psrf <- gelman.diag(combinedchains)
-#'     max_psrf <- c(max_psrf,max(psrf[[1]][,2]))
-#'     print(max_psrf[length(max_psrf)])
-#'     # if converged, calculate summary statistics at this point and return
-#'     if(max_psrf[length(max_psrf)] < thres){
-#'       burn_in <- ceiling(k/2)
-#'       # keep second half of converged chain, plus all samples afterwards
-#'       data <- lapply(data,function(x)x[(burn_in+1):min_length,])
-#'       data <- lapply(data,mcmc)
-#'       combinedchains <- mcmc.list(data)
-#'       # calculate effective sample size
-#'       combined_size <- effectiveSize(combinedchains)
-#'       return(list("converged" = TRUE,
-#'                   "max_psrf" = max_psrf,
-#'                   "burn_in" = burn_in,
-#'                   "combined_size" = combined_size))
-#'     }
-#'   }
-#'   # else return summary statistics for second half of chain
-#'   burn_in <- ceiling(k/2)
-#'   # keep second half of converged chain, plus all samples afterwards
-#'   data <- lapply(data,function(x)x[(burn_in+1):min_length,])
-#'   data <- lapply(data,mcmc)
-#'   combinedchains <- mcmc.list(data)
-#'   # calculate effective sample size
-#'   combined_size <- effectiveSize(combinedchains)
-#'   list("converged" = FALSE,
-#'        "max_psrf" = max_psrf,
-#'        "burn_in" = burn_in,
-#'        "combined_size" = combined_size)
-3
+
+  n_replicates <- length(filenames)
+  n_pars <- nrow(startTab[[1]])
+  diagnostics <- list(converged = FALSE)
+  startTab_current <- startTab
+  total_iterations <- 0
+  filenames_current <- filenames
+  if(!("max_total_iterations" %in% names(mcmcPars))){
+    mcmcPars <- c(mcmcPars, "max_total_iterations" = mcmcPars[["iterations"]])
+  }
+
+  seed <- lapply(seq_len(n_replicates), function(x) x)
+
+  timing <- system.time(
+    while(!diagnostics$converged && total_iterations < mcmcPars[["max_total_iterations"]]){
+
+      ## run MCMC for random starting values
+      output_current <- parLapply_wrapper(run_parallel,seq_len(n_replicates),
+                                  function(x) run_MCMC(startTab_current[[x]], data, mcmcPars,
+                                                       filenames_current[x], CREATE_POSTERIOR_FUNC,
+                                                       mvrPars[[x]], PRIOR_FUNC = PRIOR_FUNC,
+                                                       0.1, seed = seed[[x]]))
+
+      # if first time running
+      if(total_iterations == 0){
+        output <- output_current
+        # get current parameters
+        current_pars <- lapply(output, function(x) data.table::fread(x$file))
+        current_pars <- lapply(current_pars, function(x) as.numeric(x[nrow(x),2:(n_pars+1)]))
+      } else {
+        # append the new output file
+        append.csv <- function(x){
+          # read new output file
+          temp <- data.table::fread(output_current[[x]]$file)
+          temp <- temp[2:nrow(temp),]
+          # renumber samples to continue from old file
+          temp$sampno <- (1:nrow(temp))*mcmcPars[["thin"]] + (output[[x]]$adaptive_period + total_iterations + 1)
+          current_pars <- as.numeric(temp[nrow(temp),2:(n_pars+1)])
+          # append to old file
+          write.table(temp, output[[x]]$file,
+                      row.names=FALSE,col.names=FALSE,sep=",",append=TRUE)
+          # delete cont file
+          file.remove(output_current[[x]]$file)
+          invisible(current_pars)
+        }
+        current_pars <- lapply(1:n_replicates,append.csv)
+      }
+
+      # write output e.g. step size to file
+      output_write <- output_current
+      seed_idx <- which(names(output_write[[1]]) == "seed")
+      output_write <- lapply(output_write, function(x) x[-seed_idx])
+      dump("output_write", paste0(filenames[1],".output"), append = (total_iterations > 0))
+
+      ## can't calculate convergence diagnostics if only one replicate run,
+      ## so stop running here
+      if(n_replicates == 1){
+        diagnostics$converged <- TRUE
+        diagnostics$burn_in <- mcmcPars["iterations"]/2
+      } else {
+        ## calculate convergence diagnostics
+        diagnostics <- calc_diagnostics(filenames = sapply(output, function(x) x$file),
+                                        check_freq = floor(mcmcPars[["iterations"]]/10/mcmcPars[["thin"]]),
+                                        fixed = startTab[[1]]$fixed,
+                                        skip = sapply(output, function(x) floor(x$adaptive_period/mcmcPars[["thin"]])))
+      }
+
+      total_iterations <- total_iterations + mcmcPars[["iterations"]]
+
+      ## get things ready to run again if it hasn't converged
+
+
+
+      mcmcPars["adaptive_period"] <- 0
+
+      if(is.null(mvrPars)){
+        startTab_current <- lapply(1:n_replicates,
+                                   function(x) cbind(data.frame(values = current_pars[[x]]),
+                                                     startTab[[1]][c("names","fixed","lower_bound","upper_bound")],
+                                                     data.frame(steps = output_current[[x]]$steps)))
+      } else {
+        startTab_current <- lapply(1:n_replicates,
+                                   function(x) cbind(data.frame(values = current_pars[[x]]),
+                                                     startTab[[1]][c("names","fixed","lower_bound","upper_bound","steps")]))
+
+        make_new_mvrPars <- function(output){
+          covMat_expand <- diag(nrow(startTab[[1]]))
+          unfixed <- which(startTab[[1]]$fixed == 0)
+          covMat_expand[unfixed,unfixed] <- output$covMat
+          list(covMat_expand, output$scale, w = mvrPars[[1]]$w)
+        }
+
+        mvrPars <- lapply(output_current, make_new_mvrPars)
+      }
+
+      filenames_current <- paste0(filenames,"_new")
+      seed <- lapply(output_current, function(x) x$seed)
+    }
+  )
+
+  # write elapsed time to file
+  write(timing,paste0(filenames[1],".time"))
+
+  # write diagnostics to file
+  dump("diagnostics",
+       paste0(filenames[1],".diagnostics"),
+       append = FALSE)
+  list("diagnostics" = diagnostics, "output" = output)
+}
+
+#' see whether MCMC chains have converged; if so, calculate effective sample size and burn-in
+#'
+#' see whether MCMC chains have converged; if so, calculate effective sample size and burn-in
+#'
+#' @param filenames character vector of filenames, each corresponding to one csv
+#' file outputted by run_MCMC
+#' @param check_freq: check whether convergence has occurred every check_freq iterations
+#' along the chain
+#' @param fixed: logical vector: vector whose entries are TRUE if the corresponding
+#' parameter is fixed, FALSE if the parameter is fitted. i.e. parTab$fixed
+#' @param skip: numeric vector either of length 1 or of same length as filenames:
+#' skip this many entries from the start of each csv file
+#' @return if convergence has occurred, return a list with the elements
+#' converged: logical = TRUE
+#' burn_in: the number of burn-in iterations
+#' combined_size: effective sample size combined across chains
+#' if convergence has not occurred, return a list with the element
+#' converged: logical = FALSE
+#' max.prsf:maximum value of potential scale reduction factor across parameters
+#' @export
+calc_diagnostics <- function(filenames,check_freq,fixed,skip = 0){
+
+  ## replicate skip value if more than one filename given but only one skip value given
+  if(length(skip) == 1){
+    skip <- rep(skip, length(filenames))
+  }
+  ## check if number of skip values equal to number of filenames
+  if(length(skip) != length(filenames)){
+    stop("input vector filenames different length to input vector skip")
+  }
+  data <- lapply(filenames,function(x) data.table::fread(x))
+
+  # discard parameters which are fixed
+  data <- lapply(1:length(data),function(x) data[[x]][(skip[x]+1):nrow(data[[x]]),2:(length(fixed)+1)])
+  # data <- lapply(data,function(x) x[(skip+1):nrow(x),2:(length(fixed)+1)])
+
+  data <- lapply(data,function(x) x[,!as.logical(fixed),drop = FALSE, with = FALSE])
+  # determine length of shortest chain
+  min_length <- min(sapply(data,function(x)dim(x)[1]))
+  # if prsf for all parameters below threshold, converged
+  thres = 1.1
+  # calculate potential scale reduction factor
+  # note: discards first half of chain as default
+
+  max_psrf <- numeric()
+  for (k in seq(check_freq,min_length,check_freq)){
+
+    data_temp <- lapply(data,function(x)x[1:k,])
+    data_temp <- lapply(data_temp,mcmc)
+    combinedchains <- mcmc.list(data_temp)
+
+    psrf <- gelman.diag(combinedchains)
+    max_psrf <- c(max_psrf,max(psrf[[1]][,2]))
+    print(max_psrf[length(max_psrf)])
+    # if converged, calculate summary statistics at this point and return
+    if(max_psrf[length(max_psrf)] < thres){
+      burn_in <- ceiling(k/2)
+      # keep second half of converged chain, plus all samples afterwards
+      data <- lapply(data,function(x)x[(burn_in+1):min_length,])
+      data <- lapply(data,mcmc)
+      combinedchains <- mcmc.list(data)
+      # calculate effective sample size
+      combined_size <- effectiveSize(combinedchains)
+      return(list("converged" = TRUE,
+                  "max_psrf" = max_psrf,
+                  "burn_in" = burn_in,
+                  "combined_size" = combined_size))
+    }
+  }
+  # else return summary statistics for second half of chain
+  burn_in <- ceiling(k/2)
+  # keep second half of converged chain, plus all samples afterwards
+  data <- lapply(data,function(x)x[(burn_in+1):min_length,])
+  data <- lapply(data,mcmc)
+  combinedchains <- mcmc.list(data)
+  # calculate effective sample size
+  combined_size <- effectiveSize(combinedchains)
+  list("converged" = FALSE,
+       "max_psrf" = max_psrf,
+       "burn_in" = burn_in,
+       "combined_size" = combined_size)
+
 }
 
 #' performs parallel tempering
