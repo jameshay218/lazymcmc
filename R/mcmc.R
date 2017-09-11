@@ -54,7 +54,7 @@ run_MCMC <- function(parTab,
   if("parallel_tempering_iter" %in% names(mcmcPars)){
     parallel_tempering_iter <- mcmcPars[["parallel_tempering_iter"]]
   } else {
-    parallel_tempering_iter <- Inf
+    parallel_tempering_iter <- iterations + adaptive_period + 1
   }
   
   ## added functionality by ada-w-yan: adjusting adaptive period depending on 
@@ -267,10 +267,12 @@ run_MCMC <- function(parTab,
   # replicate list for parallel tempering
   mcmc_list <- rep(list(mcmc_list),length(temperatures))
   # start values for parallel tempering
-  mcmc_list <- Map(function(x,y) modifyList(x,list(current_pars = y)), mcmc_list, start_pars)
+  if(length(temperatures) > 1){
+    mcmc_list <- Map(function(x,y) modifyList(x,list(current_pars = y)), mcmc_list, start_pars)
+  }
 
   # main body of running MCMC
-  
+
   while (i <= (iterations+adaptive_period)){
 
     mcmc_list <- Map(do.call, run_MCMC_single_iter, mcmc_list)
@@ -478,6 +480,7 @@ run_MCMC <- function(parTab,
 run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,  
                           CREATE_POSTERIOR_FUNC, 
                           mvrPars, PRIOR_FUNC, run_parallel = FALSE){
+  message("temp commit")
   n_replicates <- length(filenames)
   n_pars <- nrow(startTab[[1]])
   diagnostics <- list(converged = FALSE)
