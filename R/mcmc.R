@@ -21,19 +21,26 @@ run_MCMC <- function(parTab,
                      OPT_TUNING=0.2,
                      seed,
                      ...){
-  
+
   ## check that input parameters are correctly formatted
-  if(is.list(parTab[[1]])){ # if parallel tempering
+  parallel_tempering_flag <- is.list(parTab[[1]])
+  if(parallel_tempering_flag){ # if parallel tempering
+    
     parTab_check <- lapply(parTab,lazymcmc::param_table_check)
     parTab_check_flag <- unlist(lapply(parTab_check, function(x) x[[1]]))
     if(any(parTab_check_flag)) return(parTab_check[[which(parTab_check_flag)[1]]][[2]])
+    
+    mcmcPar_check <- lapply(mvrPars, function(x) lazymcmc::mcmc_param_check(mcmcPars, x))
+    mcmcPar_check_flag <- unlist(lapply(mcmcPar_check, function(x) x[[1]]))
+    if(any(mcmcPar_check_flag)) return(mcmcPar_check[[which(mcmcPar_check_flag)[1]]][[2]])
+    
   } else {
     parTab_check <- lazymcmc::param_table_check(parTab)
     if(parTab_check[[1]] == TRUE) return(parTab_check[[2]])
+    
+    mcmcPar_check <- lazymcmc::mcmc_param_check(mcmcPars, mvrPars)
+    if(mcmcPar_check[[1]] == TRUE) return(mcmcPar_check[[2]])
   }
-
-  mcmcPar_check <- lazymcmc::mcmc_param_check(mcmcPars, mvrPars)
-  if(mcmcPar_check[[1]] == TRUE) return(mcmcPar_check[[2]])
   
   ## Allowable error in scale tuning
   TUNING_ERROR <- 0.1
@@ -78,18 +85,20 @@ run_MCMC <- function(parTab,
   poptRange <- pmax(0,poptRange)
   poptRange <- pmin(1,poptRange)
   
-  if(length(temperatures) == 1){ # only one set of starting values
+  if(!parallel_tempering_flag){ # only one set of starting values
     current_pars <- parTab$values
   } else {
     current_pars <- parTab[[1]]$values
     # store starting values for parallel chains
-    start_pars <- lapply(parTab, function(x) x$values) 
+    start_pars <- lapply(parTab, function(x) x$values)
+    steps <- lapply(parTab, function(x) x$steps)
     parTab <- parTab[[1]]
   }
   
   param_length <- nrow(parTab)
   
   unfixed_pars <- which(parTab$fixed == 0)
+  
   unfixed_par_length <- nrow(parTab[parTab$fixed== 0,])
   
   par_names <- as.character(parTab$names)
@@ -97,8 +106,6 @@ run_MCMC <- function(parTab,
   ## Parameter constraints
   lower_bounds <- parTab$lower_bound
   upper_bounds <- parTab$upper_bound
-  steps <- parTab$steps
-  steps <- rep(list(steps),length(temperatures))
   fixed <- parTab$fixed
   
   ## Arrays to store acceptance rates
@@ -109,11 +116,10 @@ run_MCMC <- function(parTab,
     reset[] <- 0
   } else { # If multivariate proposals
     tempaccepted <- tempiter <- 0
-    covMat <- mvrPars[[1]][unfixed_pars,unfixed_pars]
-    scale <- mvrPars[[2]]
-    w <- mvrPars[[3]]
-    covMat <- rep(list(covMat),length(temperatures))
-    scale <- rep(scale,length(temperatures))
+    
+    covMat <- lapply(mvrPars, function(x) x[[1]][unfixed_pars,unfixed_pars])
+    scale <- vapply(mvrPars, function(x) x[[2]], double(1))
+    w <- mvrPars[[1]][[3]]
     reset <- 0
   }
   
@@ -267,7 +273,7 @@ run_MCMC <- function(parTab,
   # replicate list for parallel tempering
   mcmc_list <- rep(list(mcmc_list),length(temperatures))
   # start values for parallel tempering
-  if(length(temperatures) > 1){
+  if(parallel_tempering_flag){
     mcmc_list <- Map(function(x,y) modifyList(x,list(current_pars = y)), mcmc_list, start_pars)
   }
 
@@ -331,7 +337,8 @@ run_MCMC <- function(parTab,
           ## For each non fixed parameter, scale the step size
 
           scale_univariate <- function(steps, popt, pcur, unfixed_pars){
-            steps[unfixed_pars] <- sapply(unfixed_pars,function(x) scaletuning(steps[x],popt,pcur[x]))
+            steps[unfixed_pars] <- vapply(unfixed_pars,function(x) scaletuning(steps[x],popt,pcur[x]),
+                                          double(length(unfixed_pars)))
             steps
           }
 
@@ -343,7 +350,7 @@ run_MCMC <- function(parTab,
           mcmc_list <- lapply(mcmc_list, function(x) reset_acceptance(x, reset))
           
         } else {       ## If using multivariate proposals
-          pcur <- sapply(mcmc_list, function(x) x[["tempaccepted"]] / x[["tempiter"]])
+          pcur <- vapply(mcmc_list, function(x) x[["tempaccepted"]] / x[["tempiter"]], double(1))
           if(chain_index > OPT_TUNING*adaptive_period & chain_index < (0.8*adaptive_period)){
             
             scale_mvr <- function(opt_chain,covMat,w,chain_index){
@@ -432,12 +439,18 @@ run_MCMC <- function(parTab,
     p_accept <- p_accept[unfixed_pars]
   }
   
+  current_pars <- lapply(mcmc_list, function(x)x$current_pars)
+  
   ## by ada-w-yan: we now output the actual adaptive period used,
   ## the acceptance probability during the last opt_freq iterations
   ## of the adaptive period, and the acceptance probability during the
   ## non-adaptive iterations
-  return(list("file"=mcmc_chain_file,"covMat"=covMat,"scale"=scale, 
-              "steps"=steps, "adaptive_period" = adaptive_period,
+  return(list("file" = mcmc_chain_file,
+              "current_pars" = current_pars,
+              "covMat" = covMat,
+              "scale" = scale, 
+              "steps" = steps, 
+              "adaptive_period" = adaptive_period,
               "p_accept_adaptive" = p_accept_adaptive,
               "p_accept" = p_accept,
               "seed" = .Random.seed))
@@ -453,7 +466,7 @@ run_MCMC <- function(parTab,
 #' Because the different chains have different initial values, this is a list 
 #' where each element is of the form of parTab in run_MCMC, but the
 #' values column has different starting values.
-#' startTab is acutally a list of n of these where n is the number of parallel chains
+#' startTab is actually a list of n of these where n is the number of parallel chains
 #' @param data the data frame of data to be fitted
 #' @param mcmcPars named vector with parameters for the MCMC procedure. 
 #' mandatory: iterations, popt, opt_freq, thin, burnin, adaptive_period, save_block
@@ -480,9 +493,20 @@ run_MCMC <- function(parTab,
 run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,  
                           CREATE_POSTERIOR_FUNC, 
                           mvrPars, PRIOR_FUNC, run_parallel = FALSE){
+  
+  parallel_tempering_flag <- 
+    ("temperature" %in% names(mcmcPars) && length(mcmcPars[["temperature"]]) > 1)
 
   n_replicates <- length(filenames)
-  n_pars <- nrow(startTab[[1]])
+  
+  if(parallel_tempering_flag){
+    n_pars <- nrow(startTab[[1]][[1]])
+  } else {
+    n_pars <- nrow(startTab[[1]])
+  }
+
+  seed <- lapply(seq_len(n_replicates), function(x) x)
+  
   diagnostics <- list(converged = FALSE)
   startTab_current <- startTab
   total_iterations <- 0
@@ -491,7 +515,6 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
     mcmcPars <- c(mcmcPars, "max_total_iterations" = mcmcPars[["iterations"]])
   }
 
-  seed <- lapply(seq_len(n_replicates), function(x) x)
 
   timing <- system.time(
     while(!diagnostics$converged && total_iterations < mcmcPars[["max_total_iterations"]]){
@@ -506,9 +529,6 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
       # if first time running
       if(total_iterations == 0){
         output <- output_current
-        # get current parameters
-        current_pars <- lapply(output, function(x) data.table::fread(x$file))
-        current_pars <- lapply(current_pars, function(x) as.numeric(x[nrow(x),2:(n_pars+1)]))
       } else {
         # append the new output file
         append.csv <- function(x){
@@ -523,10 +543,13 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
                       row.names=FALSE,col.names=FALSE,sep=",",append=TRUE)
           # delete cont file
           file.remove(output_current[[x]]$file)
-          invisible(current_pars)
+          invisible(NULL)
         }
-        current_pars <- lapply(1:n_replicates,append.csv)
+        lapply(seq_len(n_replicates),append.csv)
       }
+      
+      # get current parameters
+      current_pars <- lapply(output_current, function(x) x$current_pars)
 
       # write output e.g. step size to file
       output_write <- output_current
@@ -538,41 +561,75 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
       ## so stop running here
       if(n_replicates == 1){
         diagnostics$converged <- TRUE
-        diagnostics$burn_in <- mcmcPars["iterations"]/2
+        diagnostics$burn_in <- mcmcPars[["iterations"]] / 2
       } else {
+        if(parallel_tempering_flag){
+          fixed <- startTab[[1]][[1]]$fixed
+        } else {
+          fixed <- startTab[[1]]$fixed
+        }
+        
         ## calculate convergence diagnostics
-        diagnostics <- calc_diagnostics(filenames = sapply(output, function(x) x$file),
+        diagnostics <- calc_diagnostics(filenames = vapply(output, function(x) x$file, character(1)),
                                         check_freq = floor(mcmcPars[["iterations"]]/10/mcmcPars[["thin"]]),
-                                        fixed = startTab[[1]]$fixed,
-                                        skip = sapply(output, function(x) floor(x$adaptive_period/mcmcPars[["thin"]])))
+                                        fixed = fixed,
+                                        skip = vapply(output, function(x) floor(x$adaptive_period/mcmcPars[["thin"]]), 
+                                                      double(1)))
       }
 
       total_iterations <- total_iterations + mcmcPars[["iterations"]]
 
       ## get things ready to run again if it hasn't converged
 
-
-
       mcmcPars["adaptive_period"] <- 0
-
+    browser()
       if(is.null(mvrPars)){
-        startTab_current <- lapply(1:n_replicates,
-                                   function(x) cbind(data.frame(values = current_pars[[x]]),
-                                                     startTab[[1]][c("names","fixed","lower_bound","upper_bound")],
-                                                     data.frame(steps = output_current[[x]]$steps)))
-      } else {
-        startTab_current <- lapply(1:n_replicates,
-                                   function(x) cbind(data.frame(values = current_pars[[x]]),
-                                                     startTab[[1]][c("names","fixed","lower_bound","upper_bound","steps")]))
-
-        make_new_mvrPars <- function(output){
-          covMat_expand <- diag(nrow(startTab[[1]]))
-          unfixed <- which(startTab[[1]]$fixed == 0)
-          covMat_expand[unfixed,unfixed] <- output$covMat
-          list(covMat_expand, output$scale, w = mvrPars[[1]]$w)
+        if(parallel_tempering_flag){
+        ### fill in
+        } else {
+          startTab_current <- Map(function(x,y) cbind(data.frame(values = x),
+                                                      startTab[[1]][c("names","fixed","lower_bound","upper_bound")],
+                                                      data.frame(steps = y$steps)),
+                                  current_pars, output_current)
         }
 
-        mvrPars <- lapply(output_current, make_new_mvrPars)
+      } else {
+        
+        make_new_startTab_wrapper <- function(startTab_single){
+          f <- function(values){
+            cbind(data.frame(values = values),
+              startTab_single[c("names","fixed","lower_bound","upper_bound","steps")])
+          }
+          f
+        }
+
+        make_new_mvrPars_wrapper <- function(startTab_single, w){
+          f <- function(output){
+            covMat_expand <- diag(nrow(startTab_single))
+            unfixed <- which(startTab_single$fixed == 0)
+            covMat_expand[unfixed,unfixed] <- output$covMat
+            list(covMat_expand, output$scale, w = w)
+          }
+          f
+        }
+        
+        if(parallel_tempering_flag){
+          startTab_single <- startTab[[1]][[1]]
+          make_new_startTab <- make_new_startTab_wrapper(startTab_single)
+          make_new_mvrPars <- make_new_mvrPars_wrapper(startTab_single, mvrPars[[1]][[1]]$w)
+          
+          startTab_current <- lapply(current_pars,
+                                     function(x) lapply(x, make_new_startTab))
+          mvrPars <- lapply(output_current, function(x)lapply(x, make_new_mvrPars))
+        } else {
+          startTab_single <- startTab[[1]]
+          make_new_startTab <- make_new_startTab_wrapper(startTab_single)
+          make_new_mvrPars <- make_new_mvrPars_wrapper(startTab_single, mvrPars[[1]]$w)
+          
+          startTab_current <- lapply(current_pars, make_new_startTab)
+          mvrPars <- lapply(output_current, make_new_mvrPars)
+        }
+
       }
 
       filenames_current <- paste0(filenames,"_new")
@@ -621,20 +678,23 @@ calc_diagnostics <- function(filenames,check_freq,fixed,skip = 0){
     stop("input vector filenames different length to input vector skip")
   }
   data <- lapply(filenames,function(x) data.table::fread(x))
-
+  
   # discard parameters which are fixed
-  data <- lapply(1:length(data),function(x) data[[x]][(skip[x]+1):nrow(data[[x]]),2:(length(fixed)+1)])
+  data <- Map(function(x,y) x[(y+1):nrow(x),2:(length(fixed)+1)], data, skip)
   # data <- lapply(data,function(x) x[(skip+1):nrow(x),2:(length(fixed)+1)])
+  
+  fitted <- !as.logical(fixed)
+  data <- lapply(data,function(x) x[,fitted,drop = FALSE, with = FALSE])
 
-  data <- lapply(data,function(x) x[,!as.logical(fixed),drop = FALSE, with = FALSE])
   # determine length of shortest chain
-  min_length <- min(sapply(data,function(x)dim(x)[1]))
+  min_length <- min(vapply(data,function(x)dim(x)[1], double(1)))
   # if prsf for all parameters below threshold, converged
   thres = 1.1
   # calculate potential scale reduction factor
   # note: discards first half of chain as default
 
   max_psrf <- numeric()
+
   for (k in seq(check_freq,min_length,check_freq)){
 
     data_temp <- lapply(data,function(x)x[1:k,])
@@ -686,7 +746,7 @@ calc_diagnostics <- function(filenames,check_freq,fixed,skip = 0){
 parallel_tempering <- function(mcmc_list_in, temperatures, offset){
   
   mcmc_list_out <- mcmc_list_in
-  probabs <- sapply(mcmc_list_in, function(x) x$probab)
+  probabs <- vapply(mcmc_list_in, function(x) x$probab, double(1))
   if((offset + 1) <= (length(mcmc_list_in) - 1)){
     swap_ind <- seq(offset + 1, length(mcmc_list_in) - 1, by = 2)
     
@@ -696,7 +756,7 @@ parallel_tempering <- function(mcmc_list_in, temperatures, offset){
       runif(1) <= exp(delta)
     }
     
-    swaps <- sapply(swap_ind,function(x) decide_if_swap(x,x+1))
+    swaps <- vapply(swap_ind,function(x) decide_if_swap(x,x+1), logical(1))
     
     perform_swap <- function(mcmc_list_in, swap, swap_ind){
       mcmc_list <- mcmc_list_in[c(swap_ind, swap_ind + 1)]
