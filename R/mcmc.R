@@ -33,6 +33,9 @@ run_MCMC <- function(parTab,
     mcmcPar_check <- lapply(mvrPars, function(x) lazymcmc::mcmc_param_check(mcmcPars, x))
     mcmcPar_check_flag <- unlist(lapply(mcmcPar_check, function(x) x[[1]]))
     if(any(mcmcPar_check_flag)) return(mcmcPar_check[[which(mcmcPar_check_flag)[1]]][[2]])
+    if(!("parallel_tempering_iter" %in% names(mcmcPars))) {
+      stop("parallel_tempering_iter not given")
+    }
     
   } else {
     parTab_check <- lazymcmc::param_table_check(parTab)
@@ -58,6 +61,7 @@ run_MCMC <- function(parTab,
   } else {
     temperatures <- 1
   }
+  
   if("parallel_tempering_iter" %in% names(mcmcPars)){
     parallel_tempering_iter <- mcmcPars[["parallel_tempering_iter"]]
   } else {
@@ -190,6 +194,7 @@ run_MCMC <- function(parTab,
   pcurUnfixed <- -1
   p_accept_adaptive <- NA
   offset <- 0
+  potential_swaps <- swaps <- 0
   
   ## set seed
   if(!missing(seed)){
@@ -261,7 +266,7 @@ run_MCMC <- function(parTab,
     }
     f
   }
-  ## error here with single temperature
+
   run_MCMC_single_iter <- lapply(seq_along(temperatures),
                                  function(x) create_run_MCMC_single_iter_fn
                                  (unfixed_pars,unfixed_par_length,
@@ -285,13 +290,15 @@ run_MCMC <- function(parTab,
 
   while (i <= (iterations+adaptive_period)){
 
-    # mcmc_list[[1]] <- do.call(run_MCMC_single_iter[[1]],mcmc_list[[1]])
     mcmc_list <- Map(do.call, run_MCMC_single_iter, mcmc_list)
     
     # perform parallel tempering
     
     if(i %% parallel_tempering_iter == 0){
-      mcmc_list <- parallel_tempering(mcmc_list, temperatures, offset)
+      parallel_tempering_list <- parallel_tempering(mcmc_list, temperatures, offset)
+      mcmc_list <- parallel_tempering_list$mcmc_list
+      swaps <- swaps + parallel_tempering_list$swaps
+      potential_swaps <- potential_swaps + 1
       offset <- 1 - offset
     }
     
@@ -379,7 +386,13 @@ run_MCMC <- function(parTab,
           message(cat("Pcur: ", pcur[1],sep="\t"))
           message(cat("Scale: ", scale[1],sep="\t"))
         }
+        
+        # calibrate temperatures
+        swap_ratio <- swaps / potential_swaps
+        temperatures <- calibrate_temperatures(temperatures, swap_ratio)
+        swaps <- potential_swaps <- 0
       }
+      
       chain_index <- chain_index + 1
       
       # remake run_MCMC_single_iter for new step sizes
@@ -457,6 +470,7 @@ run_MCMC <- function(parTab,
               "adaptive_period" = adaptive_period,
               "p_accept_adaptive" = p_accept_adaptive,
               "p_accept" = p_accept,
+              "temperatures" = temperatures,
               "seed" = .Random.seed))
 }
 
@@ -518,13 +532,19 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
   if(!("max_total_iterations" %in% names(mcmcPars))){
     mcmcPars <- c(mcmcPars, "max_total_iterations" = mcmcPars[["iterations"]])
   }
+  
+  thin <- mcmcPars[["thin"]]
+  max_total_iterations <- mcmcPars[["max_total_iterations"]]
+  iterations <- mcmcPars[["iterations"]]
+  
+  mcmcPars <- rep(list(mcmcPars), n_replicates)
 
   timing <- system.time(
-    while(!diagnostics$converged && total_iterations < mcmcPars[["max_total_iterations"]]){
+    while(!diagnostics$converged && total_iterations < max_total_iterations){
 
       ## run MCMC for random starting values
       output_current <- parLapply_wrapper(run_parallel,seq_len(n_replicates),
-                                  function(x) run_MCMC(startTab_current[[x]], data, mcmcPars,
+                                  function(x) run_MCMC(startTab_current[[x]], data, mcmcPars[[x]],
                                                        filenames_current[x], CREATE_POSTERIOR_FUNC,
                                                        mvrPars[[x]], PRIOR_FUNC = PRIOR_FUNC,
                                                        0.1, seed = seed[[x]]))
@@ -539,7 +559,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
           temp <- data.table::fread(output_current[[x]]$file)
           temp <- temp[2:nrow(temp),]
           # renumber samples to continue from old file
-          temp$sampno <- (1:nrow(temp))*mcmcPars[["thin"]] + (output[[x]]$adaptive_period + total_iterations + 1)
+          temp$sampno <- (1:nrow(temp))*thin + (output[[x]]$adaptive_period + total_iterations + 1)
           current_pars <- as.numeric(temp[nrow(temp),2:(n_pars+1)])
           # append to old file
           write.table(temp, output[[x]]$file,
@@ -564,7 +584,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
       ## so stop running here
       if(n_replicates == 1){
         diagnostics$converged <- TRUE
-        diagnostics$burn_in <- mcmcPars[["iterations"]] / 2
+        diagnostics$burn_in <- iterations / 2
       } else {
         if(parallel_tempering_flag){
           fixed <- startTab[[1]][[1]]$fixed
@@ -574,17 +594,15 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
         
         ## calculate convergence diagnostics
         diagnostics <- calc_diagnostics(filenames = vapply(output, function(x) x$file, character(1)),
-                                        check_freq = floor(mcmcPars[["iterations"]]/10/mcmcPars[["thin"]]),
+                                        check_freq = floor(iterations / 10 / thin),
                                         fixed = fixed,
-                                        skip = vapply(output, function(x) floor(x$adaptive_period/mcmcPars[["thin"]]), 
+                                        skip = vapply(output, function(x) floor(x$adaptive_period / thin), 
                                                       double(1)))
       }
 
-      total_iterations <- total_iterations + mcmcPars[["iterations"]]
+      total_iterations <- total_iterations + iterations
 
       ## get things ready to run again if it hasn't converged
-
-      mcmcPars["adaptive_period"] <- 0
       
       make_new_startTab_wrapper <- function(startTab_single){
         f <- function(values, steps){
@@ -597,6 +615,16 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
         }
         f
       }
+      
+      make_new_mcmcPars <- function(old_mcmcPars, temperature){
+        new_mcmcPars <- old_mcmcPars
+        new_mcmcPars$temperature <- temperature
+        new_mcmcPars$adaptive_period <- 0
+        new_mcmcPars
+      }
+      
+      temperatures <- lapply(output_current, function(x) x$temperatures)
+      mcmcPars <- Map(make_new_mcmcPars, mcmcPars, temperatures)
     
       if(is.null(mvrPars)){
 
@@ -627,7 +655,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
         
         covMat <- lapply(output_current, function(x) x$covMat)
         scale <- lapply(output_current, function(x) x$scale)
-        
+
         if(parallel_tempering_flag){
           startTab_single <- startTab[[1]][[1]]
           make_new_startTab <- make_new_startTab_wrapper(startTab_single)
@@ -791,8 +819,10 @@ parallel_tempering <- function(mcmc_list_in, temperatures, offset){
     mcmc_list_out <- Map(function(x,y) perform_swap(mcmc_list_in,x,y),
                          swaps,swap_ind)
     mcmc_list_out <- unname(unlist(mcmc_list_out, recursive = FALSE))
+  } else {
+    swaps <- 0
   }
-  mcmc_list_out
+  list("swaps" = swaps, "mcmc_list" = mcmc_list_out)
 }
 
 #' wrapper for parLapply for cluster
@@ -807,4 +837,27 @@ parLapply_wrapper <- function(run_parallel,x,fun,...){
   } else {
     lapply(x, fun, ...)
   }
+}
+
+#' calibrate temperatures for parallel chains
+#'
+#' @param temperatures vector of length n: current temperatures of chains
+#' @param swap_ratio vector of length n - 1: (proportion of accepted swaps
+#' out of proposed swaps)/2
+#' the factor of 2 arises because of the way the swaps are recorded, and how
+#' we alternate between swapping 1<->2, 3<->4.... and 2<->3, 4<->5...
+#' @return vector of length n: new temperatures of chains
+#'
+calibrate_temperatures <- function(temperatures,swap_ratio) {
+  
+  diff_temp <- diff(temperatures)
+  # find chains between which the swap ratio is too large
+  too_large = swap_ratio > .2 # note factor of 2 from main text -- see above
+  # find chains between which the swap ratio is too small
+  too_small = swap_ratio < .05
+  # adjust differences between temperatures accordingly
+  diff_temp = diff_temp*(too_large*1.5 + too_small*.75 + (1-too_large-too_small))
+  # reconstruct temperatures from their differences
+  cumsum(c(temperatures[1],diff_temp));
+  
 }

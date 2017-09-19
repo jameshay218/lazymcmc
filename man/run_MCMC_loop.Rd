@@ -13,7 +13,7 @@ such as bounds, initial values etc.
 Because the different chains have different initial values, this is a list 
 where each element is of the form of parTab in run_MCMC, but the
 values column has different starting values.
-startTab is acutally a list of n of these where n is the number of parallel chains}
+startTab is actually a list of n of these where n is the number of parallel chains}
 
 \item{data}{the data frame of data to be fitted}
 
