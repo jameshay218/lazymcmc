@@ -87,6 +87,8 @@ run_MCMC <- function(parTab,
   
   if(!parallel_tempering_flag){ # only one set of starting values
     current_pars <- parTab$values
+    steps <- list(parTab$steps)
+    start_pars <- parTab$values
   } else {
     current_pars <- parTab[[1]]$values
     # store starting values for parallel chains
@@ -116,7 +118,9 @@ run_MCMC <- function(parTab,
     reset[] <- 0
   } else { # If multivariate proposals
     tempaccepted <- tempiter <- 0
-    
+    if(!parallel_tempering_flag){
+      mvrPars <- list(mvrPars)
+    }
     covMat <- lapply(mvrPars, function(x) x[[1]][unfixed_pars,unfixed_pars])
     scale <- vapply(mvrPars, function(x) x[[2]], double(1))
     w <- mvrPars[[1]][[3]]
@@ -257,7 +261,7 @@ run_MCMC <- function(parTab,
     }
     f
   }
-  
+  ## error here with single temperature
   run_MCMC_single_iter <- lapply(seq_along(temperatures),
                                  function(x) create_run_MCMC_single_iter_fn
                                  (unfixed_pars,unfixed_par_length,
@@ -281,6 +285,7 @@ run_MCMC <- function(parTab,
 
   while (i <= (iterations+adaptive_period)){
 
+    # mcmc_list[[1]] <- do.call(run_MCMC_single_iter[[1]],mcmc_list[[1]])
     mcmc_list <- Map(do.call, run_MCMC_single_iter, mcmc_list)
     
     # perform parallel tempering
@@ -338,7 +343,7 @@ run_MCMC <- function(parTab,
 
           scale_univariate <- function(steps, popt, pcur, unfixed_pars){
             steps[unfixed_pars] <- vapply(unfixed_pars,function(x) scaletuning(steps[x],popt,pcur[x]),
-                                          double(length(unfixed_pars)))
+                                          double(1))
             steps
           }
 
@@ -440,7 +445,6 @@ run_MCMC <- function(parTab,
   }
   
   current_pars <- lapply(mcmc_list, function(x)x$current_pars)
-  
   ## by ada-w-yan: we now output the actual adaptive period used,
   ## the acceptance probability during the last opt_freq iterations
   ## of the adaptive period, and the acceptance probability during the
@@ -505,7 +509,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
     n_pars <- nrow(startTab[[1]])
   }
 
-  seed <- lapply(seq_len(n_replicates), function(x) x)
+  seed <- lapply(seq_len(n_replicates), identity)
   
   diagnostics <- list(converged = FALSE)
   startTab_current <- startTab
@@ -514,7 +518,6 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
   if(!("max_total_iterations" %in% names(mcmcPars))){
     mcmcPars <- c(mcmcPars, "max_total_iterations" = mcmcPars[["iterations"]])
   }
-
 
   timing <- system.time(
     while(!diagnostics$converged && total_iterations < mcmcPars[["max_total_iterations"]]){
@@ -582,36 +585,48 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
       ## get things ready to run again if it hasn't converged
 
       mcmcPars["adaptive_period"] <- 0
-    browser()
+      
+      make_new_startTab_wrapper <- function(startTab_single){
+        f <- function(values, steps){
+          if(missing(steps)){
+            steps <- startTab_single$steps
+          }
+          cbind(data.frame("values" = values),
+                startTab_single[c("names","fixed","lower_bound","upper_bound")],
+                data.frame("steps" = steps))
+        }
+        f
+      }
+    
       if(is.null(mvrPars)){
+
+        steps <- lapply(output_current, function(x) x$steps)
         if(parallel_tempering_flag){
-        ### fill in
+          startTab_single <- startTab[[1]][[1]]
+
+          make_new_startTab <- make_new_startTab_wrapper(startTab_single)
+          startTab_current <- Map(function(x,y) Map(make_new_startTab, x, y), 
+                                  current_pars, steps)
         } else {
-          startTab_current <- Map(function(x,y) cbind(data.frame(values = x),
-                                                      startTab[[1]][c("names","fixed","lower_bound","upper_bound")],
-                                                      data.frame(steps = y$steps)),
-                                  current_pars, output_current)
+          startTab_single <- startTab[[1]]
+          make_new_startTab <- make_new_startTab_wrapper(startTab_single)
+          startTab_current <- Map(make_new_startTab,current_pars, steps)
         }
 
       } else {
-        
-        make_new_startTab_wrapper <- function(startTab_single){
-          f <- function(values){
-            cbind(data.frame(values = values),
-              startTab_single[c("names","fixed","lower_bound","upper_bound","steps")])
-          }
-          f
-        }
 
         make_new_mvrPars_wrapper <- function(startTab_single, w){
-          f <- function(output){
+          f <- function(covMat, scale){
             covMat_expand <- diag(nrow(startTab_single))
             unfixed <- which(startTab_single$fixed == 0)
-            covMat_expand[unfixed,unfixed] <- output$covMat
-            list(covMat_expand, output$scale, w = w)
+            covMat_expand[unfixed,unfixed] <- covMat
+            list(covMat_expand, scale, w = w)
           }
           f
         }
+        
+        covMat <- lapply(output_current, function(x) x$covMat)
+        scale <- lapply(output_current, function(x) x$scale)
         
         if(parallel_tempering_flag){
           startTab_single <- startTab[[1]][[1]]
@@ -620,14 +635,15 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
           
           startTab_current <- lapply(current_pars,
                                      function(x) lapply(x, make_new_startTab))
-          mvrPars <- lapply(output_current, function(x)lapply(x, make_new_mvrPars))
+
+          mvrPars <- Map(function(x,y) Map(make_new_mvrPars, x, y), covMat, scale)
         } else {
           startTab_single <- startTab[[1]]
-          make_new_startTab <- make_new_startTab_wrapper(startTab_single)
+          make_new_startTab <- make_new_startTab_wrapper(startTab_single, univariate = FALSE)
           make_new_mvrPars <- make_new_mvrPars_wrapper(startTab_single, mvrPars[[1]]$w)
-          
+
           startTab_current <- lapply(current_pars, make_new_startTab)
-          mvrPars <- lapply(output_current, make_new_mvrPars)
+          mvrPars <- Map(make_new_mvrPars, covMat, scale)
         }
 
       }

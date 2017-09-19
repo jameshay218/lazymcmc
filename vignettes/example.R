@@ -49,20 +49,26 @@ mcmcPars <- list("iterations"=10000,"popt"=0.44,"opt_freq"=1000,
 n_row_covMat <- sum(parTab$fixed == 0)
 covMat <- diag(nrow(parTab))
 mvrPars <- list(covMat,2.38/sqrt(n_row_covMat),w=0.8)
-mvrPars <- rep(list(mvrPars), length(mcmcPars[["temperature"]]))
+
+n_temperatures <- length(mcmcPars[["temperature"]])
+if(n_temperatures > 1){
+  mvrPars <- rep(list(mvrPars), n_temperatures)
+}
 
 startTab <- parTab
 startTab$values <- c(3.5,1)
-startTab <- rep(list(startTab),length(mcmcPars[["temperature"]]))
-startTab[[length(mcmcPars[["temperature"]])]]$values <- c(3,4)
+if(n_temperatures > 1){
+  startTab <- rep(list(startTab),n_temperatures)
+  startTab[[n_temperatures]]$values <- c(3,4)
+}
 
-# output <- run_MCMC(parTab=startTab, data=data, mcmcPars=mcmcPars, filename="test", 
-#                    CREATE_POSTERIOR_FUNC=my_creation_function, mvrPars=mvrPars, 
+# output <- run_MCMC(parTab=startTab, data=data, mcmcPars=mcmcPars, filename="test",
+#                    CREATE_POSTERIOR_FUNC=my_creation_function, mvrPars=mvrPars,
 #                    PRIOR_FUNC = my_prior, OPT_TUNING=0.2)
 
 n_replicates <- 3
 startTab <- rep(list(startTab),n_replicates)
 mvrPars <- rep(list(mvrPars), n_replicates)
-output <- run_MCMC_loop(startTab =startTab, data=data, mcmcPars=mcmcPars, filename=paste0("test",1:3), 
-                   CREATE_POSTERIOR_FUNC=my_creation_function, mvrPars=mvrPars, 
+output <- run_MCMC_loop(startTab =startTab, data=data, mcmcPars=mcmcPars, filename=paste0("test",seq_len(n_replicates)),
+                   CREATE_POSTERIOR_FUNC=my_creation_function, mvrPars=mvrPars,
                    PRIOR_FUNC = my_prior)
