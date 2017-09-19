@@ -16,7 +16,7 @@ along the chain}
 \item{fixed:}{logical vector: vector whose entries are TRUE if the corresponding
 parameter is fixed, FALSE if the parameter is fitted. i.e. parTab$fixed}
 
-\item{skip:}{numeric vector either of length 1 or of same length as filenames: 
+\item{skip:}{numeric vector either of length 1 or of same length as filenames:
 skip this many entries from the start of each csv file}
 }
 \value{
