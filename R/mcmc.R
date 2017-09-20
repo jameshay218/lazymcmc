@@ -207,7 +207,7 @@ run_MCMC <- function(parTab,
     }
     
   }
-  
+
   create_run_MCMC_single_iter_fn <- function(unfixed_pars,unfixed_par_length,
                                              lower_bounds,upper_bounds,steps,scale,
                                              covMat,mvrPars,temperature){
@@ -667,7 +667,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
           mvrPars <- Map(function(x,y) Map(make_new_mvrPars, x, y), covMat, scale)
         } else {
           startTab_single <- startTab[[1]]
-          make_new_startTab <- make_new_startTab_wrapper(startTab_single, univariate = FALSE)
+          make_new_startTab <- make_new_startTab_wrapper(startTab_single)
           make_new_mvrPars <- make_new_mvrPars_wrapper(startTab_single, mvrPars[[1]]$w)
 
           startTab_current <- lapply(current_pars, make_new_startTab)
