@@ -834,7 +834,7 @@ parallel_tempering <- function(mcmc_list_in, temperatures, offset){
 parLapply_wrapper <- function(run_parallel,x,fun,...){
   if(run_parallel){
     sys_info <- Sys.info()
-    if(sys_info$sysname == "Windows"){
+    if(sys_info[[1]] == "Windows"){
       parLapply(cl = NULL, x, fun, ...)
     } else {
       mclapply(x, fun, ..., mc.cores = length(x))
