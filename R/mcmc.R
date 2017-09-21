@@ -557,10 +557,10 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
         append.csv <- function(x){
           # read new output file
           temp <- data.table::fread(output_current[[x]]$file)
-          temp <- temp[2:nrow(temp),]
+          temp <- temp[seq(2,nrow(temp)),]
           # renumber samples to continue from old file
-          temp$sampno <- (1:nrow(temp))*thin + (output[[x]]$adaptive_period + total_iterations + 1)
-          current_pars <- as.numeric(temp[nrow(temp),2:(n_pars+1)])
+          temp$sampno <- seq_len(nrow(temp))*thin + (output[[x]]$adaptive_period + total_iterations + 1)
+          current_pars <- as.numeric(temp[nrow(temp),seq(2,(n_pars+1))])
           # append to old file
           write.table(temp, output[[x]]$file,
                       row.names=FALSE,col.names=FALSE,sep=",",append=TRUE)
@@ -833,7 +833,12 @@ parallel_tempering <- function(mcmc_list_in, temperatures, offset){
 #' @return output arguments of lapply
 parLapply_wrapper <- function(run_parallel,x,fun,...){
   if(run_parallel){
-    parLapply(cl = NULL, x, fun, ...)
+    sys_info <- Sys.info()
+    if(sys_info$sysname == "Windows"){
+      parLapply(cl = NULL, x, fun, ...)
+    } else {
+      mclapply(x, fun, ..., mc.cores = length(x))
+    }
   } else {
     lapply(x, fun, ...)
   }
@@ -849,7 +854,7 @@ parLapply_wrapper <- function(run_parallel,x,fun,...){
 #' @return vector of length n: new temperatures of chains
 #'
 calibrate_temperatures <- function(temperatures,swap_ratio) {
-  
+  return(temperatures)
   diff_temp <- diff(temperatures)
   # find chains between which the swap ratio is too large
   too_large = swap_ratio > .2 # note factor of 2 from main text -- see above
@@ -858,6 +863,6 @@ calibrate_temperatures <- function(temperatures,swap_ratio) {
   # adjust differences between temperatures accordingly
   diff_temp = diff_temp*(too_large*1.5 + too_small*.75 + (1-too_large-too_small))
   # reconstruct temperatures from their differences
-  cumsum(c(temperatures[1],diff_temp));
+  cumsum(c(temperatures[1],diff_temp))
   
 }
