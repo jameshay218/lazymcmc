@@ -780,49 +780,53 @@ calc_diagnostics <- function(filenames,check_freq,fixed,skip = 0){
 
 #' performs parallel tempering
 #' 
-#' @param mcmc_list_in a list of lists: values, log likelihood etc. of parallel MCMC chains
+#' @param mcmc_list a list of lists: values, log likelihood etc. of parallel MCMC chains
 #' @param temperatures numeric vector: temperatures of chains
 #' @param offset integer: 0 or 1. 0 = swap chains 1 <-> 2, 3 <-> 4...
 #' 1 = swap chains 2<->3, 4<->5...
 #' 
 #' @return a list of lists: values, log likelihood etc. of paralle chains after parallel tempering
 #' @export
-parallel_tempering <- function(mcmc_list_in, temperatures, offset){
+parallel_tempering <- function(mcmc_list, temperatures, offset){
+
+  recorded_swaps <- double(length(mcmc_list) - 1)
   
-  mcmc_list_out <- mcmc_list_in
-  probabs <- vapply(mcmc_list_in, function(x) x$probab, double(1))
-  if((offset + 1) <= (length(mcmc_list_in) - 1)){
-    swap_ind <- seq(offset + 1, length(mcmc_list_in) - 1, by = 2)
+  # extract current probabilities and log likelihoods
+  probabs <- vapply(mcmc_list, function(x) x$probab, double(1))
+  current_pars <- lapply(mcmc_list, function(x) x$current_pars)
+  
+  # decide which chains to swap
+  if((offset + 1) <= (length(mcmc_list) - 1)){
+    swap_ind <- seq(offset + 1, length(mcmc_list) - 1, by = 2)
     
     decide_if_swap <- function(x,y){
       delta <- (1 / temperatures[y] - 1 / temperatures[x]) *
         (probabs[x] - probabs[y])
       runif(1) <= exp(delta)
     }
+
+    swaps <- vapply(swap_ind, function(x) decide_if_swap(x,x+1), logical(1))
+    swap_ind <- swap_ind[swaps]
+
+    # perform swap
     
-    swaps <- vapply(swap_ind,function(x) decide_if_swap(x,x+1), logical(1))
-    
-    perform_swap <- function(mcmc_list_in, swap, swap_ind){
-      mcmc_list <- mcmc_list_in[c(swap_ind, swap_ind + 1)]
-      if(swap){
-        mcmc_list_out <- mcmc_list
-        mcmc_list_out[[1]][["probab"]] <- mcmc_list[[2]][["probab"]]
-        mcmc_list_out[[2]][["probab"]] <- mcmc_list[[1]][["probab"]]
-        mcmc_list_out[[1]][["current_pars"]] <- mcmc_list[[2]][["current_pars"]]
-        mcmc_list_out[[2]][["current_pars"]] <- mcmc_list[[1]][["current_pars"]]
-        mcmc_list_out
-      } else {
-        mcmc_list
-      }
+    perform_swap <- function(vec, swap_ind){
+      vec_new <- vec
+      vec_new[swap_ind] <- vec[swap_ind + 1]
+      vec_new[swap_ind + 1] <- vec[swap_ind]
+      vec_new
     }
-    
-    mcmc_list_out <- Map(function(x,y) perform_swap(mcmc_list_in,x,y),
-                         swaps,swap_ind)
-    mcmc_list_out <- unname(unlist(mcmc_list_out, recursive = FALSE))
-  } else {
-    swaps <- 0
+
+     probabs <- perform_swap(probabs, swap_ind)
+     current_pars <- perform_swap(current_pars, swap_ind)
+     new_list <- Map(function(x,y) list(probab = x, current_pars = y),
+                     probabs, current_pars)
+
+    mcmc_list <- Map(modifyList, mcmc_list, new_list)
+
+    recorded_swaps[swap_ind] <- 1
   }
-  list("swaps" = swaps, "mcmc_list" = mcmc_list_out)
+  list("swaps" = recorded_swaps, "mcmc_list" = mcmc_list)
 }
 
 #' wrapper for parLapply for cluster
@@ -854,7 +858,7 @@ parLapply_wrapper <- function(run_parallel,x,fun,...){
 #' @return vector of length n: new temperatures of chains
 #'
 calibrate_temperatures <- function(temperatures,swap_ratio) {
-  return(temperatures)
+
   diff_temp <- diff(temperatures)
   # find chains between which the swap ratio is too large
   too_large = swap_ratio > .2 # note factor of 2 from main text -- see above

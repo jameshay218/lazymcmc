@@ -43,8 +43,8 @@ my_prior <- function(pars){
 }
 
 mcmcPars <- list("iterations"=10000,"popt"=0.44,"opt_freq"=1000,
-              "thin"=1,"adaptive_period"=5000,"save_block"=100,"temperature" = c(1,5),
-              "parallel_tempering_iter" = 10)
+              "thin"=1,"adaptive_period"=5000,"save_block"=100,"temperature" = c(1,5,9,13,17),
+               "parallel_tempering_iter" = 10)
 
 n_row_covMat <- sum(parTab$fixed == 0)
 covMat <- diag(nrow(parTab))
@@ -69,6 +69,6 @@ if(n_temperatures > 1){
 n_replicates <- 3
 startTab <- rep(list(startTab),n_replicates)
 mvrPars <- rep(list(mvrPars), n_replicates)
-output <- run_MCMC_loop(startTab =startTab, data=data, mcmcPars=mcmcPars, filename=paste0("test",seq_len(n_replicates)),
+output <- run_MCMC_loop(startTab =startTab, data=data, mcmcPars=mcmcPars, filename=paste0("test2",seq_len(n_replicates)),
                    CREATE_POSTERIOR_FUNC=my_creation_function, mvrPars=mvrPars,
-                   PRIOR_FUNC = my_prior)
+                   PRIOR_FUNC = my_prior,run_parallel = TRUE)

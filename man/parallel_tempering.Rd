@@ -4,10 +4,10 @@
 \alias{parallel_tempering}
 \title{performs parallel tempering}
 \usage{
-parallel_tempering(mcmc_list_in, temperatures, offset)
+parallel_tempering(mcmc_list, temperatures, offset)
 }
 \arguments{
-\item{mcmc_list_in}{a list of lists: values, log likelihood etc. of parallel MCMC chains}
+\item{mcmc_list}{a list of lists: values, log likelihood etc. of parallel MCMC chains}
 
 \item{temperatures}{numeric vector: temperatures of chains}
 
