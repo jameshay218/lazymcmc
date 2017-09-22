@@ -136,6 +136,7 @@ run_MCMC <- function(parTab,
   
   ## Setup MCMC chain file with correct column names
   mcmc_chain_file <- paste(filename,"_chain.csv",sep="")
+  fail_file <- paste0(filename,"_chain_fail.csv")
   
   ## Create empty chain to store every iteration for the adaptive period
   opt_chain <- matrix(nrow=adaptive_period,ncol=unfixed_par_length)
@@ -242,6 +243,9 @@ run_MCMC <- function(parTab,
           new_misc <- posterior_out$misc
         }
         
+        if(new_probab == -100000) {
+          write(proposal, fail_file, append = TRUE)
+        }
         log_prob <- min(new_probab-probab,0)
         
         ## Accept with probability 1 if better, or proportional to
@@ -250,7 +254,9 @@ run_MCMC <- function(parTab,
           current_pars <- proposal
           probab <- new_probab
           misc <- new_misc
-          
+          if(new_probab == -100000) {
+            write("accepted", fail_file, append = TRUE)
+          }
           ## Store acceptances
           if(is.null(mvrPars)){
             tempaccepted[j] <- tempaccepted[j] + 1
@@ -312,7 +318,7 @@ run_MCMC <- function(parTab,
       save_chain[no_recorded,1] <- sampno
       save_chain[no_recorded,2:(ncol(save_chain)-1-misc_length)] <- current_pars
       if(misc_length > 0){
-        save_chain[no_recorded,(ncol(save_chain)-1-misc_length+1):(ncol(save_chain)-1)] <- unname(misc)
+        try(save_chain[no_recorded,(ncol(save_chain)-1-misc_length+1):(ncol(save_chain)-1)] <- unname(misc))
       }
       save_chain[no_recorded,ncol(save_chain)] <- probab
       no_recorded <- no_recorded + 1
@@ -548,7 +554,6 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
                                                        filenames_current[x], CREATE_POSTERIOR_FUNC,
                                                        mvrPars[[x]], PRIOR_FUNC = PRIOR_FUNC,
                                                        0.1, seed = seed[[x]]))
-
       # if first time running
       if(total_iterations == 0){
         output <- output_current
