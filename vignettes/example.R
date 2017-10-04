@@ -45,9 +45,20 @@ my_prior <- function(pars){
 ## specify temperatures here
 ## parallel_tempering_iter: do parallel tempering every x iterations (decide whether
 ## to swap the parameter values between adjacent chains)
+## max_adaptive_period: if specified, and target acceptance proportion not reached within
+## adaptive period, continue adapting in blocks of "adaptive_period", with a max
+## of max_adaptive_period.
+## adaptiveLeeway: a parameter between 0 and 1.  Controls how strict "reaching
+## the target acceptance proportion" is.  If set to 0, the exact acceptance
+## proportion must be reached (so don't do this.)  If set to 1, any acceptance proportion
+## is deemed to be "close enough".  (So set it to some value in between.)
+## max_total_iterations: if convergence is not reached within "iterations", 
+## continue sampling in blocks of "iterations", with a max =f
+## max_total_iterations.
 mcmcPars <- list("iterations"=10000,"popt"=0.44,"opt_freq"=1000,
               "thin"=1,"adaptive_period"=5000,"save_block"=100,"temperature" = seq_len(5),
-               "parallel_tempering_iter" = 10)
+               "parallel_tempering_iter" = 10,"max_adaptive_period" = 1e4, 
+              "adaptiveLeeway" = 0.2, "max_total_iterations" = 1e4)
 
 n_row_covMat <- sum(parTab$fixed == 0)
 covMat <- diag(nrow(parTab))
