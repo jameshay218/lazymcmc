@@ -73,13 +73,13 @@ mcmc_param_check <- function(mcmcPars, mvrPars){
                               needed_names[!(needed_names %in% names(mcmcPars))])
         errors <- list(errors, names_error)
     }
-    if(mcmcPars["iterations"] < 1){
+    if(mcmcPars[["iterations"]] < 1){
         errors <- list(errors, "Error in iterations - less than 1 iteration specified")        
     }
-    if(mcmcPars["popt"] < 0 | mcmcPars["popt"] > 1){
+    if(mcmcPars[["popt"]] < 0 | mcmcPars[["popt"]] > 1){
         errors <- list(errors, "Error in popt - invalid desired acceptance rate")
     }
-    if(mcmcPars["thin"] > mcmcPars["iterations"]){
+    if(mcmcPars[["thin"]] > mcmcPars[["iterations"]]){
         errors <- list(errors, "Error in thin value - thinning more than number of iterations")
     }
 
@@ -88,6 +88,12 @@ mcmc_param_check <- function(mcmcPars, mvrPars){
             errors <- list(errors, "Error in mvrPars - list should have 3 elements")
         }
     }
+    
+    if("parallel_tempering_iter" %in% names(mcmcPars) && 
+       (!("temperature" %in% names(mcmcPars)) || length(mcmcPars[["temperature"]]) < 2)){
+      errors <- list(errors, "insufficient number of temperatures specified for parallel tempering")
+    }
+    
     if(length(errors) > 1) errors[[1]] <- TRUE
     return(errors)
 }

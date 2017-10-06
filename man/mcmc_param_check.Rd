@@ -17,4 +17,3 @@ a list of errors
 \description{
 Checks that the given settings for the MCMC chain are correct
 }
-

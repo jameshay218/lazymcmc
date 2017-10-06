@@ -15,4 +15,3 @@ a named vector of model parameters
 \description{
 From an MCMC chain produced by \link{\code{run_MCMC}}, find the row with the highest log likelihood. Return the parameters (excluding the first and last columns, which are sampno and lnlike respectively) that give the highest likelihood.
 }
-

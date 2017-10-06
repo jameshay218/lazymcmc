@@ -6,7 +6,7 @@
 \usage{
 run_MCMC(parTab, data = NULL, mcmcPars, filename,
   CREATE_POSTERIOR_FUNC = NULL, mvrPars = NULL, PRIOR_FUNC = NULL,
-  OPT_TUNING = 0.2, ...)
+  OPT_TUNING = 0.2, seed, ...)
 }
 \arguments{
 \item{parTab}{the parameter table controlling information such as bounds, initial values etc}
@@ -31,4 +31,3 @@ a list with: 1) full file path at which the MCMC chain is saved as a .csv file; 
 \description{
 The Adaptive Metropolis-within-Gibbs algorithm. Given a starting point and the necessary MCMC parameters as set out below, performs a random-walk of the posterior space to produce an MCMC chain that can be used to generate MCMC density and iteration plots. The algorithm undergoes an adaptive period, where it changes the step size of the random walk for each parameter to approach the desired acceptance rate, popt. After this, a burn in period is established, and the algorithm then uses \code{\link{univ_proposal}} or \code{\link{mvr_proposal}} to explore the parameter space, recording the value and posterior value at each step. The MCMC chain is saved in blocks as a .csv file at the location given by filename.
 }
-

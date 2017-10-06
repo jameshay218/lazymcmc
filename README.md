@@ -2,7 +2,7 @@
 
 [![Project Status: WIP - Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](http://www.repostatus.org/badges/latest/wip.svg)](http://www.repostatus.org/#wip)
 
-> MCMC for the lazy
+> MCMC for the lazy (forked from [jameshay218/lazymcmc](https://github.com/jameshay218/lazymcmc))
 
 A package for very generic MCMC in R. Using either univariate uniform or multivariate gaussian proposals, explores the posterior distribution for an arbritary set of model parameters specified in R. The focus is to allow an intuitive, flexible interface rather than fancy on fancy optimisations and syntax.
 
@@ -30,7 +30,7 @@ Some features that might be useful to add. Happy to accept requests for more:
 ## Installation
 Installation is straightforward:
 ```r
-devtools::install_github("jameshay218/driftSim")
+devtools::install_github("ada-w-yan/lazymcmc")
 ```
 The outputs of the MCMC work well with the `coda` package. The only real dependency is the `MASS` package for the multivariate normal proposals. If you only want to use the univariate sampler, then you don't need to worry about this.
 
@@ -39,7 +39,7 @@ Perhaps a more relevant example is fitting an SIR model, which can be found in t
 
 Firstly, make sure you have the package installed etc.
 ```r
-if(!require(lazymcmc)) devtools::install_github("jameshay218/lazymcmc")
+if(!require(lazymcmc)) devtools::install_github("ada-w-yan/lazymcmc")
 library(lazymcmc)
 ```
 
@@ -65,8 +65,8 @@ Here's the first key part of the package syntax - the `parTab` structure. This i
 parTab <- data.frame(values=c(5,2),
                      names=c("mu","sd"),
                      fixed=0,
-                     lower_bound=c(-Inf,-Inf),
-                     upper_bound=c(Inf,Inf),
+                     lower_bound=c(0,0),
+                     upper_bound=c(10,10),
                      steps=c(0.1,0.1))
                     
 ## note that if PRIOR_FUNC == NULL, the prior is assumed to be a uniform
@@ -95,7 +95,7 @@ my_creation_function <- function(parTab, data, PRIOR_FUNC, ...){
   ## This is where you would put your own model code
   ##############################
   f <- function(pars){
-    names(pars) <- names
+    names(pars) <- parameter_names
     mu <- pars["mu"]
     sd <- pars["sd"]
     
@@ -139,7 +139,7 @@ startTab$values <- c(3.5,1)
 ## startTab$values <- runif(nrow(startTab), startTab$lower_bound, startTab$upper_bound)
 
 output <- run_MCMC(parTab=startTab, data=data, mcmcPars=mcmcPars, filename="test", 
-                   CREATE_POSTERIOR_FUNC=my_creation_func, mvrPars=NULL, 
+                   CREATE_POSTERIOR_FUNC=my_creation_function, mvrPars=NULL, 
                    PRIOR_FUNC = my_prior, OPT_TUNING=0.2)
 
 # plot results (exclude adaptive period)
@@ -170,7 +170,7 @@ mvrPars <- list(covMat,2.38/sqrt(nrow(parTab[parTab$fixed==0,])),w=0.8)
 
 startTab <- parTab
 startTab$values <- bestPars
-output2 <- run_MCMC(startTab, data, mcmcPars, filename, my_creation_func, mvrPars, PRIOR_FUNC = my_prior  ,0.2)
+output2 <- run_MCMC(startTab, data, mcmcPars, filename, my_creation_function, mvrPars, PRIOR_FUNC = my_prior  ,0.2)
 ```
 
 And that's it. If you've worked through this example and understood each step, then you should be able to write your own functions to slot in. Good luck!
