@@ -133,7 +133,7 @@ run_MCMC <- function(parTab,
   
   posterior_simp <- protect(CREATE_POSTERIOR_FUNC(parTab,data, 
                                                   PRIOR_FUNC,...))
-  
+    
   ## Setup MCMC chain file with correct column names
   mcmc_chain_file <- paste(filename,"_chain.csv",sep="")
   fail_file <- paste0(filename,"_chain_fail.csv")
@@ -146,6 +146,7 @@ run_MCMC <- function(parTab,
   ## Initial conditions ------------------------------------------------------
   ## Initial likelihood
   posterior_out <- posterior_simp(current_pars)
+
   ## added feature by ada-w-yan: for each recorded iteration,
   ## we can now write a vector with miscellaneous output to file in addition
   ## to the parameter values and likelihood
@@ -208,7 +209,6 @@ run_MCMC <- function(parTab,
     }
     
   }
-
   create_run_MCMC_single_iter_fn <- function(unfixed_pars,unfixed_par_length,
                                              lower_bounds,upper_bounds,steps,scale,
                                              covMat,mvrPars,temperature){
@@ -323,36 +323,34 @@ run_MCMC <- function(parTab,
       save_chain[no_recorded,ncol(save_chain)] <- probab
       no_recorded <- no_recorded + 1
     }
-    
-    
-    
-    ## If within adaptive period, need to do some adapting!
-    if(i <= adaptive_period){
+      
+      
+      
+      ## If within adaptive period, need to do some adapting!
+      if(i <= adaptive_period){
 
-      ## Save each step
-      
-      save_opt_chain <- function(opt_chain,mcmc_list,unfixed_pars,chain_index){
-        current_pars <- mcmc_list[["current_pars"]]
-        opt_chain[chain_index,] <- current_pars[unfixed_pars]
-        opt_chain
-      }
-      
-      opt_chain <- Map(function(x,y) save_opt_chain(x,y,unfixed_pars,chain_index),opt_chain,mcmc_list)
-      ## If in an adaptive step
-      if(chain_index %% opt_freq == 0){
-        
-        reset_acceptance <- function(mcmc_list, reset){
-          mcmc_list[["tempaccepted"]] <- mcmc_list[["tempiter"]] <- reset
-          mcmc_list
-        }
-        
-        ## If using univariate proposals
-        if(is.null(mvrPars)){
+          ## Save each step
+          ## edit by jameshay218
+          ## looping through the opt chain list without Map to avoid creating
+          ## lots of copies of big arrays. Please excuse the name of index parameter
+          ## opt_chain is a list of matrices, and mcmc_list is a list of lists of the current state of an MCMC chain
+          for(jh in 1:length(opt_chain)) opt_chain[[jh]][chain_index,] <- mcmc_list[[jh]][["current_pars"]][unfixed_pars]
           
-          ## Current acceptance rate
-          pcur <- lapply(mcmc_list, function(x) x[["tempaccepted"]] / x[["tempiter"]])
-          
-          ## For each non fixed parameter, scale the step size
+          ## If in an adaptive step
+          if(chain_index %% opt_freq == 0){
+              
+              reset_acceptance <- function(mcmc_list, reset){
+                  mcmc_list[["tempaccepted"]] <- mcmc_list[["tempiter"]] <- reset
+                  mcmc_list
+              }
+              
+              ## If using univariate proposals
+              if(is.null(mvrPars)){
+                  
+                  ## Current acceptance rate
+                  pcur <- lapply(mcmc_list, function(x) x[["tempaccepted"]] / x[["tempiter"]])
+                  
+                  ## For each non fixed parameter, scale the step size
 
           scale_univariate <- function(steps, popt, pcur, unfixed_pars){
             steps[unfixed_pars] <- vapply(unfixed_pars,function(x) scaletuning(steps[x],popt,pcur[x]),
