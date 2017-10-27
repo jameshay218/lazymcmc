@@ -164,6 +164,10 @@ run_MCMC <- function(parTab,
     probab <- posterior_out$lik
     misc <- unname(posterior_out$misc)
   }
+  
+  if(probab == -1e5) {
+    stop("initial evaluation of likelihood failed")
+  }
   misc_length <- length(misc)
   
   ## Create empty chain to store "save_block" iterations at a time
@@ -462,6 +466,7 @@ run_MCMC <- function(parTab,
   }
   
   current_pars <- lapply(mcmc_list, function(x)x$current_pars)
+  
   ## by ada-w-yan: we now output the actual adaptive period used,
   ## the acceptance probability during the last opt_freq iterations
   ## of the adaptive period, and the acceptance probability during the
