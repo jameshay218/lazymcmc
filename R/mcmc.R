@@ -753,8 +753,14 @@ calc_diagnostics <- function(filenames,check_freq,fixed,skip = 0){
     data_temp <- lapply(data_temp,mcmc)
     combinedchains <- mcmc.list(data_temp)
 
-    psrf <- gelman.diag(combinedchains)
-    max_psrf <- c(max_psrf,max(psrf[[1]][,2]))
+    psrf <- tryCatch(gelman.diag(combinedchains), error = function(e) NULL)
+    
+    if(is.null(psrf)) {
+      max_psrf <- c(max_psrf,Inf)
+    } else {
+      max_psrf <- c(max_psrf,max(psrf[[1]][,2]))
+    }
+
     print(max_psrf[length(max_psrf)])
     # if converged, calculate summary statistics at this point and return
     if(max_psrf[length(max_psrf)] < thres){
