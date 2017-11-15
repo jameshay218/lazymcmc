@@ -4,12 +4,12 @@
 
 > MCMC for the lazy
 
-A package for very generic MCMC in R. Using either univariate uniform or multivariate gaussian proposals, explores the posterior distribution for an arbritary set of model parameters specified in R. The focus is to allow an intuitive, flexible interface rather than fancy on fancy optimisations and syntax.
+A package for very generic MCMC in R. Using either univariate uniform or multivariate gaussian proposals, explores the posterior distribution for an arbritary set of model parameters specified in R. The focus is to allow an intuitive, flexible interface rather than on fancy optimisations and syntax.
 
 **The documentation and examples are a work in progress and the code is not fully tested**
 
 ## Motivation
-There are a lot of great MCMC packages out there (see eg. [rstan](http://mc-stan.org) or the various BUGS iterations). However, sometimes you've written a basic model in R and just want something quick and dirty to fit to some data. The aim of this package is to let you do just that. This package allows you to run an MCMC chain with a lot of flexibility, but without much focus on efficiency (though it is pretty efficient!). The code itself is fast and the adaptive multivariate sample should work for most jobs, but it's not going to be as efficient (in terms of convergence speed and proposals) as something more complex like Hamiltonian MCMC. 
+There are a lot of great MCMC packages out there (see eg. [rstan](http://mc-stan.org) or the various BUGS iterations). However, sometimes you've written a basic model in R and just want something quick and dirty to fit to some data. The aim of this package is to let you do just that. This package allows you to run an MCMC with a lot of flexibility, but without much focus on efficiency (though it is pretty efficient!). The code itself is fast and the adaptive multivariate sample should work for most jobs, but it's not going to be as efficient (in terms of convergence speed and proposals) as something more complex like Hamiltonian MCMC. 
 
 If you have a some R code that, given a set of parameters, generates a model and calculates a likelihood of observing some data, then this package will estimate your posterior distribution.
 
@@ -30,7 +30,7 @@ Some features that might be useful to add. Happy to accept requests for more:
 ## Installation
 Installation is straightforward:
 ```r
-devtools::install_github("jameshay218/driftSim")
+devtools::install_github("jameshay218/lazymcmc")
 ```
 The outputs of the MCMC work well with the `coda` package. The only real dependency is the `MASS` package for the multivariate normal proposals. If you only want to use the univariate sampler, then you don't need to worry about this.
 
