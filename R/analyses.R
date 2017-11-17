@@ -130,7 +130,7 @@ load_mcmc_chains <- function(location="",parTab,unfixed=TRUE, thin=1,
         tmp_list
     })
     
-    chain <- as.mcmc(do.call("rbind",read_chains))
+    chain <- coda::as.mcmc(do.call("rbind",read_chains))
     return(list("list"=list_chains,"chain"=chain))
 }
 
@@ -141,7 +141,7 @@ load_mcmc_chains <- function(location="",parTab,unfixed=TRUE, thin=1,
 #' @return a data frame of MCMC statistics
 #' @export
 summarise_chain <- function(chain){
-  tmp <- summary(as.mcmc(chain))
+  tmp <- summary(coda::as.mcmc(chain))
   return(cbind(tmp$statistics,tmp$quantiles))
 }
 

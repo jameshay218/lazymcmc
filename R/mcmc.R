@@ -66,7 +66,8 @@ run_MCMC <- function(parTab,
                                                     PRIOR_FUNC,...))
     
     ## Setup MCMC chain file with correct column names
-    mcmc_chain_file <- paste(filename,"_chain.csv",sep="")
+    mcmc_chain_file <- paste(filename,"_univariate_chain.csv",sep="")
+    if(!is.null(mvrPars)) mcmc_chain_file <- paste(filename,"_multivariate_chain.csv",sep="")
 
     ## Create empty chain to store every iteration for the adaptive period
     opt_chain <- matrix(nrow=adaptive_period,ncol=unfixed_par_length)
