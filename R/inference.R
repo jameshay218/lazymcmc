@@ -86,8 +86,8 @@ protect <- function(f){
 
 #' Get maximum likelihood parameters
 #'
-#' From an MCMC chain produced by \link{\code{run_MCMC}}, find the row with the highest log likelihood. Return the parameters (excluding the first and last columns, which are sampno and lnlike respectively) that give the highest likelihood.
-#' @param chain the MCMC chain as saved by \link{\code{run_MCMC}}
+#' From an MCMC chain produced by \code{\link{run_MCMC}}, find the row with the highest log likelihood. Return the parameters (excluding the first and last columns, which are sampno and lnlike respectively) that give the highest likelihood.
+#' @param chain the MCMC chain as saved by \code{\link{run_MCMC}}
 #' @return a named vector of model parameters
 #' @export
 get_best_pars <- function(chain){
