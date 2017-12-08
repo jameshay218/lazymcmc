@@ -7,9 +7,9 @@
 mcmc_param_check(mcmcPars, mvrPars)
 }
 \arguments{
-\item{mcmcPars}{the vector of MCMC pars as expected by \link{\code{run_MCMC}}}
+\item{mcmcPars}{the vector of MCMC pars as expected by \code{\link{run_MCMC}}}
 
-\item{mvrPars}{the list of multivarate MCMC pars as expected by \link{\code{run_MCMC}}}
+\item{mvrPars}{the list of multivarate MCMC pars as expected by \code{\link{run_MCMC}}}
 }
 \value{
 a list of errors
