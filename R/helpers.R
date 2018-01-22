@@ -97,3 +97,18 @@ mcmc_param_check <- function(mcmcPars, mvrPars){
     if(length(errors) > 1) errors[[1]] <- TRUE
     return(errors)
 }
+
+#' data.table::fread with tryCatch
+#' 
+#' data.table::fread sometimes crashes.  If crashing, try read.csv then converting.
+#' 
+#' @param filename character vector of length 1 ending in .csv
+#' @return the read data frame
+try_fread <- function(filename, ...) {
+  tryCatch ({
+    data.table::fread(filename, ...)
+  }, error = function(c) {
+    data_table <- read.csv(filename, ...)
+    data.table::as.data.table(data_table)
+  })
+}

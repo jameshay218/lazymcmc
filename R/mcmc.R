@@ -564,7 +564,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
         # append the new output file
         append.csv <- function(x){
           # read new output file
-          temp <- data.table::fread(output_current[[x]]$file)
+          temp <- try_fread(output_current[[x]]$file)
           temp <- temp[seq(2,nrow(temp)),]
           # renumber samples to continue from old file
           temp$sampno <- seq_len(nrow(temp))*thin + (output[[x]]$adaptive_period + total_iterations + 1)
@@ -729,7 +729,7 @@ calc_diagnostics <- function(filenames,check_freq,fixed,skip = 0){
   if(length(skip) != length(filenames)){
     stop("input vector filenames different length to input vector skip")
   }
-  data <- lapply(filenames,function(x) data.table::fread(x))
+  data <- lapply(filenames,function(x) try_fread(x))
   
   # discard parameters which are fixed
   data <- Map(function(x,y) x[(y+1):nrow(x),2:(length(fixed)+1)], data, skip)
