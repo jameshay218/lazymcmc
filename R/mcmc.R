@@ -808,6 +808,7 @@ parallel_tempering <- function(mcmc_list, temperatures, offset){
   # extract current probabilities and log likelihoods
   probabs <- vapply(mcmc_list, function(x) x$probab, double(1))
   current_pars <- lapply(mcmc_list, function(x) x$current_pars)
+  misc <- lapply(mcmc_list, function(x) x$misc)
   
   # decide which chains to swap
   if((offset + 1) <= (length(mcmc_list) - 1)){
@@ -833,8 +834,11 @@ parallel_tempering <- function(mcmc_list, temperatures, offset){
 
      probabs <- perform_swap(probabs, swap_ind)
      current_pars <- perform_swap(current_pars, swap_ind)
-     new_list <- Map(function(x,y) list(probab = x, current_pars = y),
-                     probabs, current_pars)
+     misc <- perform_swap(misc, swap_ind)
+     new_list <- Map(function(x,y,z) list(probab = x, 
+                                          current_pars = y,
+                                          misc = z),
+                     probabs, current_pars, misc)
 
     mcmc_list <- Map(modifyList, mcmc_list, new_list)
 

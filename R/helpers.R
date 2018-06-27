@@ -42,6 +42,7 @@ param_table_check <- function(parTab){
         bound_error <- "Error in bounds - upper_bound lower than lower_bound"
         errors <- list(errors, bound_error)
     }
+
     if(any(parTab$values < parTab$lower_bound | parTab$values > parTab$upper_bound)){
         bound_error <- "Error in starting values - values outside of bounds"
         errors <- list(errors, bound_error)
