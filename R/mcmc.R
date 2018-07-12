@@ -98,7 +98,9 @@ run_MCMC <- function(parTab,
     # store starting values for parallel chains
     start_pars <- lapply(parTab, function(x) x$values)
     steps <- lapply(parTab, function(x) x$steps)
+    
     parTab <- parTab[[1]]
+    
   }
   
   param_length <- nrow(parTab)
@@ -113,7 +115,7 @@ run_MCMC <- function(parTab,
   lower_bounds <- parTab$lower_bound
   upper_bounds <- parTab$upper_bound
   fixed <- parTab$fixed
-  
+
   ## Arrays to store acceptance rates
   ## If univariate proposals
   if(is.null(mvrPars)){
@@ -130,6 +132,7 @@ run_MCMC <- function(parTab,
     w <- mvrPars[[1]][[3]]
     reset <- 0
   }
+  
   
   posterior_simp <- protect(CREATE_POSTERIOR_FUNC(parTab,data, 
                                                   PRIOR_FUNC,...))
@@ -239,6 +242,7 @@ run_MCMC <- function(parTab,
       ){
         ## Calculate new likelihood and find difference to old likelihood
         posterior_out <- posterior_simp(proposal)
+
         if(is.atomic(posterior_out)){
           new_probab <- posterior_out
           new_misc <- numeric()
@@ -519,7 +523,7 @@ run_MCMC <- function(parTab,
 #' @export
 run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,  
                           CREATE_POSTERIOR_FUNC, 
-                          mvrPars, PRIOR_FUNC, run_parallel = FALSE){
+                          mvrPars, PRIOR_FUNC, seed, run_parallel = FALSE){
   
   parallel_tempering_flag <- 
     ("temperature" %in% names(mcmcPars) && length(mcmcPars[["temperature"]]) > 1)
@@ -532,7 +536,9 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
     n_pars <- nrow(startTab[[1]])
   }
 
-  seed <- lapply(seq_len(n_replicates), identity)
+  if(is.null(seed)) {
+    seed <- lapply(seq_len(n_replicates), identity)
+  }
   
   diagnostics <- list(converged = FALSE)
   startTab_current <- startTab

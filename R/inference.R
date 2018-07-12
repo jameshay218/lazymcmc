@@ -23,6 +23,7 @@ mvr_proposal <- function(values, fixed, covMat){
 #' @return the parameter vector after step
 #' @export
 univ_proposal <- function(values, lower_bounds, upper_bounds,steps, index){
+
     mn <- lower_bounds[index]
     mx <- upper_bounds[index]
 
