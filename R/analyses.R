@@ -115,7 +115,7 @@ profile_likelihood_all <- function(stuck_values, f, fixed, n_values, span, par_n
 #' @return a data frame with n rows and m columns containing the percentiles
 #' @export 
 print_prctiles <- function(chain, prctiles = c(.025,.5,.975), par_names_plot){
-  prctile_table <- lapply(chain,function(x) quantile(x,prctiles))
+  prctile_table <- lapply(chain,function(x) quantile(x,prctiles, na.rm = TRUE))
   prctile_table <- t(as.data.frame(prctile_table))
   rownames(prctile_table) <- par_names_plot
   col_names <- as.character(prctiles*100)

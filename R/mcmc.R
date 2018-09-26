@@ -250,7 +250,10 @@ run_MCMC <- function(parTab,
           new_probab <- posterior_out$lik
           new_misc <- posterior_out$misc
         }
-        
+        a <- tryCatch(new_probab == -100000, error = function(e) NA)
+        if(is.na(a)) {
+          browser()
+        }
         if(new_probab == -100000) {
           write(proposal, fail_file, append = TRUE)
         }
@@ -556,7 +559,6 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
 
   timing <- system.time(
     while(!diagnostics$converged && total_iterations < max_total_iterations){
-
       ## run MCMC for random starting values
       output_current <- parLapply_wrapper(run_parallel,seq_len(n_replicates),
                                   function(x) run_MCMC(startTab_current[[x]], data, mcmcPars[[x]],
