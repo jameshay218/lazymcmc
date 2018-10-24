@@ -778,6 +778,8 @@ calc_diagnostics <- function(filenames,check_freq,fixed,skip = 0){
       data <- lapply(data,mcmc)
       combinedchains <- mcmc.list(data)
       # calculate effective sample size
+      # this is the sum of the effective sample sizes of each chain, which is
+      # not the same as the effective sample size of the concatenated chain...
       combined_size <- effectiveSize(combinedchains)
       return(list("converged" = TRUE,
                   "max_psrf" = max_psrf,
