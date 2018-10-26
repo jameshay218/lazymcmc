@@ -127,6 +127,7 @@ run_MCMC <- function(parTab,
     if(!parallel_tempering_flag){
       mvrPars <- list(mvrPars)
     }
+
     covMat <- lapply(mvrPars, function(x) x[[1]][unfixed_pars,unfixed_pars])
     scale <- vapply(mvrPars, function(x) x[[2]], double(1))
     w <- mvrPars[[1]][[3]]
@@ -250,10 +251,7 @@ run_MCMC <- function(parTab,
           new_probab <- posterior_out$lik
           new_misc <- posterior_out$misc
         }
-        a <- tryCatch(new_probab == -100000, error = function(e) NA)
-        if(is.na(a)) {
-          browser()
-        }
+
         if(new_probab == -100000) {
           write(proposal, fail_file, append = TRUE)
         }
@@ -473,7 +471,6 @@ run_MCMC <- function(parTab,
   }
   
   current_pars <- lapply(mcmc_list, function(x)x$current_pars)
-  
   ## by ada-w-yan: we now output the actual adaptive period used,
   ## the acceptance probability during the last opt_freq iterations
   ## of the adaptive period, and the acceptance probability during the
@@ -625,7 +622,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
           if(missing(steps)){
             steps <- startTab_single$steps
           }
-          cbind(data.frame("values" = values),
+          cbind(data.frame("values" = unlist(values)),
                 startTab_single[c("names","fixed","lower_bound","upper_bound")],
                 data.frame("steps" = steps))
         }
@@ -663,7 +660,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
           f <- function(covMat, scale){
             covMat_expand <- diag(nrow(startTab_single))
             unfixed <- which(startTab_single$fixed == 0)
-            covMat_expand[unfixed,unfixed] <- covMat
+            covMat_expand[unfixed,unfixed] <- unlist(covMat)
             list(covMat_expand, scale, w = w)
           }
           f
@@ -676,7 +673,6 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
           startTab_single <- startTab[[1]][[1]]
           make_new_startTab <- make_new_startTab_wrapper(startTab_single)
           make_new_mvrPars <- make_new_mvrPars_wrapper(startTab_single, mvrPars[[1]][[1]]$w)
-          
           startTab_current <- lapply(current_pars,
                                      function(x) lapply(x, make_new_startTab))
 
@@ -685,7 +681,6 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
           startTab_single <- startTab[[1]]
           make_new_startTab <- make_new_startTab_wrapper(startTab_single)
           make_new_mvrPars <- make_new_mvrPars_wrapper(startTab_single, mvrPars[[1]]$w)
-
           startTab_current <- lapply(current_pars, make_new_startTab)
           mvrPars <- Map(make_new_mvrPars, covMat, scale)
         }
