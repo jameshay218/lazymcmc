@@ -208,3 +208,16 @@ gelman_diagnostics <- function(chain, threshold=1.15){
     if(psrf > threshold | mpsrf > threshold) rerun <- TRUE
     return(list("GelmanDiag"=tmp,"WorstGelman"=worst, "Rerun"=rerun))
 }
+
+
+#' Density and iteration plot single chain
+#'
+#' Plots the posterior density and MCMC trace plots for the given chain. Requires ggplot2,cowplot and reshape2
+#' @param chain the single MCMC chain
+#' @param realPars OPTIONAL - vector of real parameter values to add to plot
+#' @return a ggplot2 object
+#' @export
+plot_single_chain <- function(chain, realPars = NULL){
+    meltedChain <- melt(chain,id.vars="sampno")
+    
+}

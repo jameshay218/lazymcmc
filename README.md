@@ -65,9 +65,10 @@ Here's the first key part of the package syntax - the `parTab` structure. This i
 parTab <- data.frame(values=c(5,2),
                      names=c("mu","sd"),
                      fixed=0,
-                     lower_bound=c(-Inf,-Inf),
-                     upper_bound=c(Inf,Inf),
-                     steps=c(0.1,0.1))
+                     lower_bound=c(-1000,0),
+                     upper_bound=c(1000,1000),
+                     steps=c(0.1,0.1),
+		     stringsAsFactors=FALSE)
                     
 ## note that if PRIOR_FUNC == NULL, the prior is assumed to be a uniform
 ## distribution with these lower and upper bounds
@@ -95,7 +96,7 @@ my_creation_function <- function(parTab, data, PRIOR_FUNC, ...){
   ## This is where you would put your own model code
   ##############################
   f <- function(pars){
-    names(pars) <- names
+    names(pars) <- parameter_names
     mu <- pars["mu"]
     sd <- pars["sd"]
     
@@ -139,7 +140,7 @@ startTab$values <- c(3.5,1)
 ## startTab$values <- runif(nrow(startTab), startTab$lower_bound, startTab$upper_bound)
 
 output <- run_MCMC(parTab=startTab, data=data, mcmcPars=mcmcPars, filename="test", 
-                   CREATE_POSTERIOR_FUNC=my_creation_func, mvrPars=NULL, 
+                   CREATE_POSTERIOR_FUNC=my_creation_function, mvrPars=NULL, 
                    PRIOR_FUNC = my_prior, OPT_TUNING=0.2)
 
 # plot results (exclude adaptive period)

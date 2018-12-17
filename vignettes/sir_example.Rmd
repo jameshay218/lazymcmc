@@ -31,7 +31,8 @@ SIR_odes <- function(t, x, params) {
     dS <- -beta*S*I
     dI <- beta*S*I - gamma*I
     dR <- gamma*I
-    list(c(dS,dI,dR))
+    inc <- beta*S*I
+    list(c(dS,dI,dR, inc))
 }
 ## Make an R0 of something flu like
 R0 <- 1.5
@@ -46,7 +47,7 @@ beta <- R0*gamma
 t <- seq(0,365,by=0.1)
 
 ## Note starting conditions for population size - we're working per capita here
-results <- as.data.frame(deSolve::ode(y=c(S=1,I=0.0001,R=0),
+results <- as.data.frame(deSolve::ode(y=c(S=1,I=0.0001,R=0,inc=0),
                              times=t, func=SIR_odes,
                              parms=c(beta,gamma)))
 
@@ -85,7 +86,7 @@ beta <- basic_repro_number*gamma/sum(S0, I0, R0)
 t <- seq(1,52*7,by=1)
 
 ## Note starting conditions for population size - we're working per capita here
-results <- as.data.frame(deSolve::ode(y=c(S=S0,I=I0,R=R0),
+results <- as.data.frame(deSolve::ode(y=c(S=S0,I=I0,R=R0,inc=0),
                              times=t, func=SIR_odes,
                              parms=c(beta,gamma)))
 
@@ -115,7 +116,7 @@ dat <- real_data
 likelihood_func <- function(pars){
   beta <- pars[1]
   gamma <- pars[2]
-  results <- as.data.frame(deSolve::ode(y=c(S=S0,I=I0,R=R0),
+  results <- as.data.frame(deSolve::ode(y=c(S=S0,I=I0,R=R0, inc=0),
                              times=t, func=SIR_odes,
                              parms=c(beta,gamma)))
   incidence <- c(0,-diff(results$S))
@@ -158,7 +159,7 @@ solve_model <- function(pars, t, S0, I0, R0, SIR_odes){
   basic_repro_number <- pars["R0"]
   gamma <- pars["gamma"]
   beta <- basic_repro_number*gamma/N
-  results <- as.data.frame(deSolve::ode(y=c(S=S0,I=I0,R=R0),
+  results <- as.data.frame(deSolve::ode(y=c(S=S0,I=I0,R=R0,inc=0),
                                times=t, func=SIR_odes,
                                parms=c(beta,gamma)))
   incidence <- c(0,-diff(results$S))
