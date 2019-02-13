@@ -531,9 +531,14 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
   n_replicates <- length(filenames)
   
   if(parallel_tempering_flag){
-    n_pars <- nrow(startTab[[1]][[1]])
+    single_startTab <- startTab[[1]][[1]]
+
   } else {
-    n_pars <- nrow(startTab[[1]])
+    single_startTab <- startTab[[1]]
+  }
+  n_pars <- nrow(single_startTab)
+  if(sum(single_startTab$fixed == 0) < 2) {
+    mvrPars <- NULL
   }
 
   if(is.null(seed)) {
@@ -864,7 +869,7 @@ parLapply_wrapper <- function(run_parallel,x,fun,...){
     if(sys_info[[1]] == "Windows"){
       parLapply(cl = NULL, x, fun, ...)
     } else {
-      mclapply(x, fun, ..., mc.cores = length(x))
+      parallel::mclapply(x, fun, ..., mc.cores = length(x))
     }
   } else {
     lapply(x, fun, ...)
