@@ -4,7 +4,8 @@
 \alias{profile_likelihood_all}
 \title{calculate and plot profile likelihood around a point in parameter space}
 \usage{
-profile_likelihood_all(stuck_values, f, fixed, n_values, span, par_names_plot)
+profile_likelihood_all(stuck_values, f, fixed, n_values, span,
+  par_names_plot)
 }
 \arguments{
 \item{stuck_values}{a named numeric vector of parameter values (length m)

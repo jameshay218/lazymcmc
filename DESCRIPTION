@@ -8,11 +8,12 @@ License: GPL-3
 LazyData: true
 URL: https://github.com/jameshay218/lazymcmc
 BugReports: https://github.com/jameshay218/lazymcmc/issues
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.1
 Suggests: 
     testthat,
     MASS,
     coda,
+    parallel,
     rmarkdown,
     knitr
 VignetteBuilder: knitr
