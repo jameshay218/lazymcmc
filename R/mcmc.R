@@ -274,6 +274,7 @@ run_MCMC <- function(parTab,
           }
         }
       }
+
       list("par_i" = par_i, "current_pars" = current_pars,
            "misc" = misc,
            "probab" = probab, "tempaccepted" = tempaccepted,
@@ -290,16 +291,23 @@ run_MCMC <- function(parTab,
                                    covMat[[x]],mvrPars,temperatures[x]))
   
   # initialise MCMC
-  mcmc_list <- list("par_i" = par_i, "current_pars" = current_pars,
-                    "misc" = misc, "probab" = probab, "tempaccepted" = tempaccepted,
-                    "tempiter" = tempiter)
   
-  # replicate list for parallel tempering
-  mcmc_list <- rep(list(mcmc_list),length(temperatures))
-  # start values for parallel tempering
-  if(parallel_tempering_flag){
-    mcmc_list <- Map(function(x,y) modifyList(x,list(current_pars = y)), mcmc_list, start_pars)
+  make_mcmc_list <- function(start_pars) {
+    posterior_out <- posterior_simp(start_pars)
+    list("par_i" = par_i, 
+         "current_pars" = start_pars,
+         "misc" = posterior_out$misc, 
+         "probab" = posterior_out$lik, 
+         "tempaccepted" = tempaccepted,
+         "tempiter" = tempiter)
   }
+  
+  if(parallel_tempering_flag){
+    mcmc_list <- lapply(start_pars, make_mcmc_list)
+  } else {
+    mcmc_list <- make_mcmc_list(current_pars)
+  }
+
 
   # main body of running MCMC
 
@@ -308,7 +316,7 @@ run_MCMC <- function(parTab,
     mcmc_list <- Map(do.call, run_MCMC_single_iter, mcmc_list)
     
     # perform parallel tempering
-    
+
     if(i %% parallel_tempering_iter == 0){
       parallel_tempering_list <- parallel_tempering(mcmc_list, temperatures, offset)
       mcmc_list <- parallel_tempering_list$mcmc_list
@@ -439,6 +447,7 @@ run_MCMC <- function(parTab,
     
     if(i %% save_block == 0){
       message(cat("Current iteration: ", i, sep="\t"))
+      
       ## Print out optimisation frequencies
     }
     
