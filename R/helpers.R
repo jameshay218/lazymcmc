@@ -62,8 +62,8 @@ param_table_check <- function(parTab){
 #' MCMC chain parameter check
 #'
 #' Checks that the given settings for the MCMC chain are correct
-#' @param mcmcPars the vector of MCMC pars as expected by \link{\code{run_MCMC}}
-#' @param mvrPars the list of multivarate MCMC pars as expected by \link{\code{run_MCMC}}
+#' @param mcmcPars the vector of MCMC pars as expected by run_MCMC
+#' @param mvrPars the list of multivarate MCMC pars as expected by run_MCMC
 #' @return a list of errors
 #' @export
 mcmc_param_check <- function(mcmcPars, mvrPars){
