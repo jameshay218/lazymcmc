@@ -305,7 +305,7 @@ run_MCMC <- function(parTab,
   if(parallel_tempering_flag){
     mcmc_list <- lapply(start_pars, make_mcmc_list)
   } else {
-    mcmc_list <- make_mcmc_list(current_pars)
+    mcmc_list <- list(make_mcmc_list(current_pars))
   }
 
 
