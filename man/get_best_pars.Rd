@@ -7,11 +7,11 @@
 get_best_pars(chain)
 }
 \arguments{
-\item{chain}{the MCMC chain as saved by \link{\code{run_MCMC}}}
+\item{chain}{the MCMC chain as saved by run_MCMC}
 }
 \value{
 a named vector of model parameters
 }
 \description{
-From an MCMC chain produced by \link{\code{run_MCMC}}, find the row with the highest log likelihood. Return the parameters (excluding the first and last columns, which are sampno and lnlike respectively) that give the highest likelihood.
+From an MCMC chain produced by run_MCMC, find the row with the highest log likelihood. Return the parameters (excluding the first and last columns, which are sampno and lnlike respectively) that give the highest likelihood.
 }
