@@ -24,6 +24,7 @@ run_MCMC <- function(parTab,
 
   ## check that input parameters are correctly formatted
   parallel_tempering_flag <- is.list(parTab[[1]])
+  
   if(parallel_tempering_flag){ # if parallel tempering
     
     parTab_check <- lapply(parTab,lazymcmc::param_table_check)
@@ -312,7 +313,7 @@ run_MCMC <- function(parTab,
   # main body of running MCMC
 
   while (i <= (iterations+adaptive_period)){
-
+    mcmc_list
     mcmc_list <- Map(do.call, run_MCMC_single_iter, mcmc_list)
     
     # perform parallel tempering
@@ -576,6 +577,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
                                                        filenames_current[x], CREATE_POSTERIOR_FUNC,
                                                        mvrPars[[x]], PRIOR_FUNC = PRIOR_FUNC,
                                                        0.1, seed = seed[[x]]))
+
       # if first time running
       if(total_iterations == 0){
         output <- output_current
