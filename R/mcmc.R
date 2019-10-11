@@ -24,7 +24,7 @@ run_MCMC <- function(parTab,
 
   ## check that input parameters are correctly formatted
   parallel_tempering_flag <- is.list(parTab[[1]])
-  
+  parallel_tempering_flag
   if(parallel_tempering_flag){ # if parallel tempering
     
     parTab_check <- lapply(parTab,lazymcmc::param_table_check)
@@ -45,7 +45,7 @@ run_MCMC <- function(parTab,
     mcmcPar_check <- lazymcmc::mcmc_param_check(mcmcPars, mvrPars)
     if(mcmcPar_check[[1]] == TRUE) return(mcmcPar_check[[2]])
   }
-  
+  print(1)
   ## Allowable error in scale tuning
   TUNING_ERROR <- 0.1
   
@@ -68,7 +68,7 @@ run_MCMC <- function(parTab,
   } else {
     parallel_tempering_iter <- iterations + adaptive_period + 1
   }
-  
+  print(2)
   ## added functionality by ada-w-yan: adjusting adaptive period depending on 
   ## the acceptance ratio.  If acceptance ratio within the last opt_freq 
   ## iterations of adaptive period not close enough to optimal,
@@ -103,7 +103,7 @@ run_MCMC <- function(parTab,
     parTab <- parTab[[1]]
     
   }
-  
+  print(3)
   param_length <- nrow(parTab)
   
   unfixed_pars <- which(parTab$fixed == 0)
@@ -147,11 +147,11 @@ run_MCMC <- function(parTab,
   opt_chain <- matrix(nrow=adaptive_period,ncol=unfixed_par_length)
   opt_chain <- rep(list(opt_chain),length(temperatures))
   chain_index <- 1
-  
+  print(4)
   ## Initial conditions ------------------------------------------------------
   ## Initial likelihood
   posterior_out <- posterior_simp(current_pars)
-
+print(6)
   ## added feature by ada-w-yan: for each recorded iteration,
   ## we can now write a vector with miscellaneous output to file in addition
   ## to the parameter values and likelihood
@@ -169,7 +169,7 @@ run_MCMC <- function(parTab,
     probab <- posterior_out$lik
     misc <- unname(posterior_out$misc)
   }
-  
+  print(5)
   if(probab == -1e5) {
     stop("initial evaluation of likelihood failed")
   }
@@ -177,7 +177,7 @@ run_MCMC <- function(parTab,
   
   ## Create empty chain to store "save_block" iterations at a time
   save_chain <- empty_save_chain <- matrix(nrow=save_block,ncol=param_length+2+misc_length)
-  
+  print(7)
   ## Set up initial csv file
   if(is.atomic(posterior_out) || is.null(names(posterior_out$misc))){
     misc_colnames <- rep("misc",misc_length)
@@ -193,7 +193,7 @@ run_MCMC <- function(parTab,
   tmp_table[1,] <- c(1,current_pars,misc,probab)
   
   colnames(tmp_table) <- chain_colnames
-  
+  print(8)
   ## Write starting conditions to file
   write.table(tmp_table,file=mcmc_chain_file,row.names=FALSE,col.names=TRUE,sep=",",append=FALSE)
   
@@ -309,7 +309,7 @@ run_MCMC <- function(parTab,
     mcmc_list <- list(make_mcmc_list(current_pars))
   }
 
-
+print(9)
   # main body of running MCMC
 
   while (i <= (iterations+adaptive_period)){
