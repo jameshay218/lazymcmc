@@ -84,8 +84,8 @@ mcmc_param_check <- function(mcmcPars, mvrPars){
     }
 
     if(!is.null(mvrPars)){
-        if(length(mvrPars) != 3){
-            errors <- list(errors, "Error in mvrPars - list should have 3 elements")
+        if(length(mvrPars) < 3){
+            errors <- list(errors, "Error in mvrPars - list should have at least 3 elements")
         }
     }
     if(length(errors) > 1) errors[[1]] <- TRUE
