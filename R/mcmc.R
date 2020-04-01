@@ -60,7 +60,7 @@ run_MCMC <- function(parTab,
         covMat <- mvrPars[[1]][unfixed_pars,unfixed_pars]
         scale <- mvrPars[[2]]
         w <- mvrPars[[3]]
-        if(length(mvrPars > 3)){
+        if(length(mvrPars) > 3){
           scale_freq <- mvrPars[[4]]
         } else {
           scale_freq <- 0.8
