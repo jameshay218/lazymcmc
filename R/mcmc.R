@@ -60,6 +60,11 @@ run_MCMC <- function(parTab,
         covMat <- mvrPars[[1]][unfixed_pars,unfixed_pars]
         scale <- mvrPars[[2]]
         w <- mvrPars[[3]]
+        if(length(mvrPars > 3)){
+          scale_freq <- mvrPars[[4]]
+        } else {
+          scale_freq <- 0.8
+        }
     }
 
     posterior_simp <- protect(CREATE_POSTERIOR_FUNC(parTab,data, 
@@ -203,14 +208,14 @@ run_MCMC <- function(parTab,
                     tempaccepted <- tempiter <- reset
 
                 } else {       ## If using multivariate proposals
-                    if(chain_index > OPT_TUNING*adaptive_period & chain_index < (0.8*adaptive_period)){
+                    if(chain_index > OPT_TUNING*adaptive_period & chain_index < (scale_freq*adaptive_period)){
                         oldCovMat <- covMat
                         ## Creates a new covariance matrix, but weights it with the old one
                         covMat <- cov(opt_chain[1:chain_index,])
                         covMat <- w*covMat + (1-w)*oldCovMat
                     }
-                    ## Scale tuning for last 20% of the adpative period
-                    if(chain_index > (0.8)*adaptive_period){
+                    ## Scale tuning for last 1-scale_freq % of the adpative period
+                    if(chain_index > (scale_freq)*adaptive_period){
                         scale <- scaletuning(scale, popt,pcur)
                     }
                     tempiter <- tempaccepted <- 0
