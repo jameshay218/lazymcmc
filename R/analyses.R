@@ -192,20 +192,20 @@ ess_diagnostics <- function(chain, threshold=200){
 gelman_diagnostics <- function(chain, threshold=1.15){
   tmp <- NULL
   gelman <- tryCatch({
-      tmp <- coda::gelman.diag(chain)
+      gelman <- coda::gelman.diag(chain)
       psrf <- max(gelman$psrf[,2])
       psrf_names <- names(which.max(gelman$psrf[,2]))
       mpsrf <- gelman$mpsrf
       worst <- c("Worst_PSRF"=psrf,"Which_worst"=psrf_names,"MPSRF"=mpsrf)
       rerun <- FALSE
       if(psrf > threshold | mpsrf > threshold) rerun <- TRUE
-      tmp <- list("GelmanDiag"=tmp,"WorstGelman"=worst, "Rerun"=rerun)
+      tmp <- list("GelmanDiag"=gelman,"WorstGelman"=worst, "Rerun"=rerun)
   }, warning = function(w){
       tmp <- w
   }, error = function(e){
       tmp <- e
   })
-    return(gelman)
+  return(gelman)
 }
 
 
