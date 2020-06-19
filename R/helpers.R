@@ -91,3 +91,24 @@ mcmc_param_check <- function(mcmcPars, mvrPars){
     if(length(errors) > 1) errors[[1]] <- TRUE
     return(errors)
 }
+
+
+#' Generate starting parameter table
+#'
+#' Generates a version of \code{par_tab} with random values between \code{lower_start} and \code{upper_start}
+#' @param par_tab See \code{\link{example_par_tab}}
+#' @return a data frame matching par_tab
+#' @family mcmc
+#' @examples
+#' data(example_par_tab)
+#' start_tab <- generate_start_tab(example_par_tab)
+#' @export
+generate_start_tab <- function(par_tab){
+    for(i in 1:nrow(par_tab)){
+        if(par_tab[i,"fixed"] == 0){
+            par_tab[i, "values"] <- runif(1,par_tab[i,"lower_start"], par_tab[i, "upper_start"])
+        }
+    }
+    return(par_tab)        
+}
+
