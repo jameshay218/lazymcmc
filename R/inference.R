@@ -51,6 +51,21 @@ univ_proposal <- function(values, lower_bounds, upper_bounds,steps, index){
     rtn
 }
 
+
+#' MCMC proposal function - univariate normal
+#'
+#' Proposal function for MCMC random walk, drawing from normal distribution centered on the current value
+#' @param values a vector of the parameters to be explored
+#' @param sds a vector of standard deviations of the proposal function
+#' @param index numeric value for the index of the parameter to be moved from the param table and vector
+#' @return the parameter vector after step
+#' @export
+univ_proposal_normal <- function(values, sds, index){
+    rtn <- values
+    rtn[index] <- rnorm(1, values[index], sds[index])
+    rtn
+}
+
 #' Scale step sizes
 #'
 #' Scales the given step size (between 0 and 1) based on the current acceptance rate to get closed to the desired acceptance rate
@@ -63,7 +78,7 @@ scaletuning <- function(step, popt,pcur){
     if(pcur ==1) pcur <- 0.99
     if(pcur == 0) pcur <- 0.01
     step = (step*qnorm(popt/2))/qnorm(pcur/2)
-    if(step > 1) step <- 1
+    #if(step > 1) step <- 1
     return(step)
 }
 

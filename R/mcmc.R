@@ -133,7 +133,8 @@ run_MCMC <- function(parTab,
             j <- unfixed_pars[par_i]
             par_i <- par_i + 1
             if(par_i > unfixed_par_length) par_i <- 1
-            proposal <- univ_proposal(current_pars, lower_bounds, upper_bounds, steps,j)
+            #proposal <- univ_proposal(current_pars, lower_bounds, upper_bounds, steps,j)
+            proposal <- univ_proposal_normal(current_pars, steps,j)
             tempiter[j] <- tempiter[j] + 1
             ## If using multivariate proposals
         } else {
