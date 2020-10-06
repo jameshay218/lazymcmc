@@ -67,8 +67,8 @@ run_MCMC <- function(parTab,
         }
     }
 
-    posterior_simp <- protect(CREATE_POSTERIOR_FUNC(parTab,data,
-                                                    PRIOR_FUNC,...))
+    posterior_simp <- protect(CREATE_POSTERIOR_FUNC(parTab=parTab,data=data,
+                                                    PRIOR_FUNC=PRIOR_FUNC,...))
 
     ## Setup MCMC chain file with correct column names
     mcmc_chain_file <- paste(filename,"_univariate_chain.csv",sep="")
