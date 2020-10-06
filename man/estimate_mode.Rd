@@ -15,4 +15,3 @@ the point estimate for the mode
 \description{
 Calculates the posterior mode based on density
 }
-

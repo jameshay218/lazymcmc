@@ -17,4 +17,3 @@ a list containing the ESS sizes and flagging which parameters have ESS below the
 \description{
 Checks the MCMC chain for effective sample sizes used the coda package, and highlights where these are less than a certain threshold
 }
-

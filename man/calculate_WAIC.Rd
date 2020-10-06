@@ -21,4 +21,3 @@ a single WAIC value
 \description{
 Given an MCMC chain, calculates the WAIC
 }
-

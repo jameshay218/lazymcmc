@@ -27,7 +27,7 @@ univ_proposal <- function(values, lower_bounds, upper_bounds,steps, index){
     mx <- upper_bounds[index]
 
     rtn <- values
-    
+
     x <- toUnitScale(values[index],mn,mx)
 
     ## 5th index is step size
@@ -42,9 +42,9 @@ univ_proposal <- function(values, lower_bounds, upper_bounds,steps, index){
     if (x > 1) x <- 2-x
 
     ## Cyclical boundary conditions
-    ##if (x < 0) x <- 1 + x	
+    ##if (x < 0) x <- 1 + x
     ##if (x > 1) x <- x - 1
-    
+
     if(x < 0 | x > 1) print("Stepped outside of unit scale. Something went wrong...")
 
     rtn[index] <- fromUnitScale(x,mn,mx)
@@ -107,10 +107,23 @@ protect <- function(f){
 #' @export
 get_best_pars <- function(chain){
     tmpNames <- colnames(chain)[2:(ncol(chain) - 1)]
-    bestPars <- as.numeric(chain[which.max(chain[, "lnlike"]), 
+    bestPars <- as.numeric(chain[which.max(chain[, "lnlike"]),
                                  2:(ncol(chain) - 1)])
     names(bestPars) <- tmpNames
     return(bestPars)
+}
+#' Get parameters based on index
+#'
+#' From an MCMC chain produced by \code{\link{run_MCMC}}, return the parameters from the specified sample number (excluding the first and last columns, which are sampno and lnlike respectively).
+#' @param chain the MCMC chain as saved by \code{\link{run_MCMC}}
+#' @param index value for sampno, matching the sampno column from the MCMC chain, to be returned
+#' @return a named vector of model parameters
+#' @export
+get_index_pars <- function(chain, index) {
+    tmp_names <- colnames(chain)[2:(ncol(chain) - 1)]
+    pars <- as.numeric(chain[chain$sampno == index, 2:(ncol(chain) - 1)])
+    names(pars) <- tmp_names
+    return(pars)
 }
 
 toUnitScale <- function(x, min, max){

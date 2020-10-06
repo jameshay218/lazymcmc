@@ -15,4 +15,3 @@ the quantiles
 \description{
 Finds the median and 95% quantiles for a vector
 }
-

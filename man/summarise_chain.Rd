@@ -15,4 +15,3 @@ a data frame of MCMC statistics
 \description{
 Returns code statistics and quantiles
 }
-

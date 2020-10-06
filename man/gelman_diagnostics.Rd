@@ -17,4 +17,3 @@ a list of gelman diagnostics and highlighting worst parameters
 \description{
 Checks the gelman diagnostics for the given MCMC chain list. Also finds the parameter with the highest PSRF.
 }
-

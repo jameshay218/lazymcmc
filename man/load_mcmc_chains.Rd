@@ -4,8 +4,16 @@
 \alias{load_mcmc_chains}
 \title{Read in MCMC chains}
 \usage{
-load_mcmc_chains(location = "", parTab, unfixed = TRUE, thin = 1,
-  burnin = 1e+05, multi = TRUE, chainNo = FALSE, PTchain = FALSE)
+load_mcmc_chains(
+  location = "",
+  parTab,
+  unfixed = TRUE,
+  thin = 1,
+  burnin = 1e+05,
+  multi = TRUE,
+  chainNo = FALSE,
+  PTchain = FALSE
+)
 }
 \arguments{
 \item{location}{the full file path to the MCMC chain containing directory}
@@ -30,4 +38,3 @@ a list containing both the MCMC chains appended to each other, and an MCMC list.
 \description{
 Loads all available MCMC chains from the chosen working directory, allowing the user to specify properties of the return chain
 }
-

@@ -28,7 +28,7 @@ run_MCMC <- function(parTab,
 
     ## Allowable error in scale tuning
     TUNING_ERROR <- 0.1
-    
+
     ## Extract MCMC parameters
     iterations <- mcmcPars["iterations"]
     popt <- mcmcPars["popt"]
@@ -48,7 +48,7 @@ run_MCMC <- function(parTab,
     upper_bounds <- parTab$upper_bound
     steps <- parTab$steps
     fixed <- parTab$fixed
-    
+
     ## Arrays to store acceptance rates
     ## If univariate proposals
     if(is.null(mvrPars)){
@@ -67,9 +67,9 @@ run_MCMC <- function(parTab,
         }
     }
 
-    posterior_simp <- protect(CREATE_POSTERIOR_FUNC(parTab,data, 
+    posterior_simp <- protect(CREATE_POSTERIOR_FUNC(parTab,data,
                                                     PRIOR_FUNC,...))
-    
+
     ## Setup MCMC chain file with correct column names
     mcmc_chain_file <- paste(filename,"_univariate_chain.csv",sep="")
     if(!is.null(mvrPars)) mcmc_chain_file <- paste(filename,"_multivariate_chain.csv",sep="")
@@ -77,7 +77,7 @@ run_MCMC <- function(parTab,
     ## Create empty chain to store every iteration for the adaptive period
     opt_chain <- matrix(nrow=adaptive_period,ncol=unfixed_par_length)
     chain_index <- 1
-    
+
     ## Initial conditions ------------------------------------------------------
     ## Initial likelihood
     posterior.out <- posterior_simp(current_pars)
@@ -85,8 +85,8 @@ run_MCMC <- function(parTab,
     ## we can now write a vector with miscellaneous output to file in addition
     ## to the parameter values and likelihood
     ## (for example, predicted model output)
-    ## usage: posterior_simp(proposal) should either return 
-    ## the likelihood as a numeric vector of length 1, 
+    ## usage: posterior_simp(proposal) should either return
+    ## the likelihood as a numeric vector of length 1,
     ## or a list with elements
     ## list$lik: the likelihood as a numeric vector of length 1
     ## list$misc: any additional output as a vector
@@ -118,7 +118,7 @@ run_MCMC <- function(parTab,
     tmp_table[1,] <- c(1,current_pars,misc,probab)
 
     colnames(tmp_table) <- chain_colnames
-    
+
     ## Write starting conditions to file
     write.table(tmp_table,file=mcmc_chain_file,row.names=FALSE,col.names=TRUE,sep=",",append=FALSE)
 
@@ -133,8 +133,11 @@ run_MCMC <- function(parTab,
             j <- unfixed_pars[par_i]
             par_i <- par_i + 1
             if(par_i > unfixed_par_length) par_i <- 1
-            #proposal <- univ_proposal(current_pars, lower_bounds, upper_bounds, steps,j)
-            proposal <- univ_proposal_normal(current_pars, steps,j)
+            #if(univ_proposal_ver == 1){
+            #  proposal <- univ_proposal(current_pars, lower_bounds, upper_bounds, steps,j)
+            #} else {
+              proposal <- univ_proposal_normal(current_pars, steps,j)
+            #}
             tempiter[j] <- tempiter[j] + 1
             ## If using multivariate proposals
         } else {
@@ -157,16 +160,16 @@ run_MCMC <- function(parTab,
               new_probab <- posterior.out$lik
               new_misc <- posterior.out$misc
             }
-            
+
             log_prob <- min(new_probab-probab,0)
-         
+
             ## Accept with probability 1 if better, or proportional to
             ## difference if not
             if(is.finite(log_prob) && log(runif(1)) < log_prob){
                 current_pars <- proposal
                 probab <- new_probab
                 misc <- new_misc
-                
+
                 ## Store acceptances
                 if(is.null(mvrPars)){
                     tempaccepted[j] <- tempaccepted[j] + 1
@@ -175,8 +178,8 @@ run_MCMC <- function(parTab,
                 }
             }
         }
-        
-        
+
+
         ## If current iteration matches with recording frequency, store in the chain. If we are at the limit of the save block,
         ## save this block of chain to file and reset chain
         if(i %% thin ==0){
@@ -189,15 +192,15 @@ run_MCMC <- function(parTab,
             no_recorded <- no_recorded + 1
         }
 
-       
-        
+
+
         ## If within adaptive period, need to do some adapting!
         if(i <= adaptive_period){
             ## Current acceptance rate
             pcur <- tempaccepted/tempiter
             ## Save each step
             opt_chain[chain_index,] <- current_pars[unfixed_pars]
-           
+
             ## If in an adaptive step
             if(chain_index %% opt_freq == 0){
                 ## If using univariate proposals
@@ -231,7 +234,7 @@ run_MCMC <- function(parTab,
             message(cat("Current iteration: ", i, sep="\t"))
             ## Print out optimisation frequencies
         }
-        
+
         if(no_recorded == save_block){
             write.table(save_chain[1:(no_recorded-1),],file=mcmc_chain_file,col.names=FALSE,row.names=FALSE,sep=",",append=TRUE)
             save_chain <- empty_save_chain
@@ -239,7 +242,7 @@ run_MCMC <- function(parTab,
         }
         sampno <- sampno + 1
     }
-    
+
     ## If there are some recorded values left that haven't been saved, then append these to the MCMC chain file. Note
     ## that due to the use of cbind, we have to check to make sure that (no_recorded-1) would not result in a single value
     ## rather than an array
