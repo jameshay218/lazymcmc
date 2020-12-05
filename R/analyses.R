@@ -124,3 +124,42 @@ print_prctiles <- function(chain, prctiles = c(.025,.5,.975), par_names_plot){
   colnames(prctile_table) <- col_names
   prctile_table
 }
+
+#' Check ESS
+#'
+#' Checks the MCMC chain for effective sample sizes used the coda package, and highlights where these are less than a certain threshold
+#' @param chain the MCMC chain to be tested
+#' @param threshold the minimum allowable ESS
+#' @return a list containing the ESS sizes and flagging which parameters have ESS below the threshold
+#' @export
+ess_diagnostics <- function(chain, threshold=200){
+  ess <- coda::effectiveSize(chain)
+  poorESS <- ess[ess < threshold]
+  return(list("ESS"=ess,"poorESS"=poorESS))
+}
+
+#' Check gelman diagnostics
+#'
+#' Checks the gelman diagnostics for the given MCMC chain list. Also finds the parameter with the highest PSRF.
+#' @param chain the list of MCMC chains
+#' @param threshold the threshold for the gelman diagnostic above which chains should be rerun
+#' @return a list of gelman diagnostics and highlighting worst parameters
+#' @export
+gelman_diagnostics <- function(chain, threshold=1.15){
+  tmp <- NULL
+  gelman <- tryCatch({
+    gelman <- coda::gelman.diag(chain)
+    psrf <- max(gelman$psrf[,2])
+    psrf_names <- names(which.max(gelman$psrf[,2]))
+    mpsrf <- gelman$mpsrf
+    worst <- c("Worst_PSRF"=psrf,"Which_worst"=psrf_names,"MPSRF"=mpsrf)
+    rerun <- FALSE
+    if(psrf > threshold | mpsrf > threshold) rerun <- TRUE
+    tmp <- list("GelmanDiag"=gelman,"WorstGelman"=worst, "Rerun"=rerun)
+  }, warning = function(w){
+    tmp <- w
+  }, error = function(e){
+    tmp <- e
+  })
+  return(gelman)
+}
