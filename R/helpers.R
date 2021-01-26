@@ -12,7 +12,7 @@ param_table_check <- function(parTab){
         class_error <- "Error in parTab - must be data frame"
         errors <- list(errors, class_error)
     }
-    if(!(any(needed_names %in% colnames(parTab)))){
+    if(!(all(needed_names %in% colnames(parTab)))){
         colnames_error <- paste0("Error in columns - missing ",
                                  needed_names[!(needed_names %in% colnames(parTab))],
                                  ". Columns should be value, lower_bound, upper_bound, steps, fixed")
