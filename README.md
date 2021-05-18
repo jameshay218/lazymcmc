@@ -4,7 +4,7 @@
 
 > MCMC for the lazy
 
-A package for very generic MCMC in R. Using either univariate uniform or multivariate gaussian proposals, explores the posterior distribution for an arbritary set of model parameters specified in R. The focus is to allow an intuitive, flexible interface rather than on fancy optimisations and syntax.
+A package for generic MCMC in R. Using either univariate uniform or multivariate gaussian proposals, explores the posterior distribution for an arbritary set of model parameters specified in R. The focus is to allow an intuitive, flexible interface rather than on fancy optimisations and syntax.
 
 **The documentation and examples are a work in progress and the code is not fully tested**
 
