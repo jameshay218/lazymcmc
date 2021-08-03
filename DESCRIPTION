@@ -8,7 +8,7 @@ License: GPL-3
 LazyData: true
 URL: https://github.com/jameshay218/lazymcmc
 BugReports: https://github.com/jameshay218/lazymcmc/issues
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.1
 Imports:
 	parallel,
     coda
