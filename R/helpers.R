@@ -203,7 +203,7 @@ load_mcmc_chains <- function(location="",parTab,unfixed=TRUE, thin=1,
   ## Get the estimated parameters only
   if(unfixed){
     fixed <- parTab$fixed
-    read_chains <- lapply(read_chains, function(x) x[,c(which(fixed==0)+1,ncol(x))])
+    read_chains <- lapply(read_chains, function(x) x[,c(1,which(fixed==0)+1,ncol(x))])
   }
   
   ## Try to create an MCMC list. This might not work, which is why we have a try catch
