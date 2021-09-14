@@ -163,7 +163,7 @@ get_index_pars <- function(chain, index) {
 load_mcmc_chains <- function(location="",parTab,unfixed=TRUE, thin=1,
                              burnin=100000, multi=TRUE, chainNo=FALSE,
                              PTchain=FALSE){
-  if(dir.exists(location)){
+  if(length(location) == 1 & dir.exists(location)){
     print("Reading in chains from directory")
     if(multi){
       chains <- Sys.glob(file.path(location,"*multivariate_chain.csv"))
@@ -175,7 +175,11 @@ load_mcmc_chains <- function(location="",parTab,unfixed=TRUE, thin=1,
     }
   } else {
     print("Reading in chains from filepaths")
-    chains <- location
+    if(length(location) == 1){
+      chains <- list(location)
+    } else {
+      chains <- as.list(location)
+    }
   }
   
   print(chains)
