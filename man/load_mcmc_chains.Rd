@@ -16,7 +16,7 @@ load_mcmc_chains(
 )
 }
 \arguments{
-\item{location}{the full file path to the MCMC chain containing directory}
+\item{location}{Either the full file path to the MCMC chain containing directory, or a vector of file paths with the MCMC chainsa}
 
 \item{parTab}{the parameter table that was used to solve the model (mainly used to find which were free parameters)}
 

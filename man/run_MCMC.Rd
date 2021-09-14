@@ -13,7 +13,6 @@ run_MCMC(
   mvrPars = NULL,
   PRIOR_FUNC = NULL,
   OPT_TUNING = 0.2,
-  univ_proposal_ver = 1,
   ...
 )
 }
