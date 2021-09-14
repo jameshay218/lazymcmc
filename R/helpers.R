@@ -150,7 +150,7 @@ get_index_pars <- function(chain, index) {
 #' Read in MCMC chains
 #'
 #' Loads all available MCMC chains from the chosen working directory, allowing the user to specify properties of the return chain
-#' @param location the full file path to the MCMC chain containing directory
+#' @param location Either the full file path to the MCMC chain containing directory, or a vector of file paths with the MCMC chainsa
 #' @param parTab the parameter table that was used to solve the model (mainly used to find which were free parameters)
 #' @param unfixed Boolean, if TRUE, only returns free parameters
 #' @param thin thin chain by this much
@@ -163,14 +163,21 @@ get_index_pars <- function(chain, index) {
 load_mcmc_chains <- function(location="",parTab,unfixed=TRUE, thin=1,
                              burnin=100000, multi=TRUE, chainNo=FALSE,
                              PTchain=FALSE){
-  if(multi){
-    chains <- Sys.glob(file.path(location,"*multivariate_chain.csv"))
+  if(dir.exists(location)){
+    print("Reading in chains from directory")
+    if(multi){
+      chains <- Sys.glob(file.path(location,"*multivariate_chain.csv"))
+    } else {
+      chains <- Sys.glob(file.path(location,"*univariate_chain.csv"))
+    }
+    if(PTchain){
+      chains <- Sys.glob(file.path(location,"*_chain.csv"))
+    }
   } else {
-    chains <- Sys.glob(file.path(location,"*univariate_chain.csv"))
+    print("Reading in chains from filepaths")
+    chains <- location
   }
-  if(PTchain){
-    chains <- Sys.glob(file.path(location,"*_chain.csv"))
-  }
+  
   print(chains)
   if(length(chains) < 1){
     message("Error - no chains found")
