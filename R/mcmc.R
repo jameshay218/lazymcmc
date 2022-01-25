@@ -138,6 +138,8 @@ run_MCMC <- function(parTab,
   
   posterior_simp <- protect(CREATE_POSTERIOR_FUNC(parTab,data, 
                                                   PRIOR_FUNC,...))
+  posterior_simp <- (CREATE_POSTERIOR_FUNC(parTab,data, 
+                                                  PRIOR_FUNC,...))
     
   ## Setup MCMC chain file with correct column names
   mcmc_chain_file <- paste(filename,"_chain.csv",sep="")
@@ -222,6 +224,7 @@ run_MCMC <- function(parTab,
                                              lower_bounds,upper_bounds,steps,scale,
                                              covMat,mvrPars,temperature){
     f <- function(par_i,current_pars,misc,probab,tempaccepted,tempiter){
+      
       ## If using univariate proposals
       if(is.null(mvrPars)) {
         ## For each parameter (Gibbs)
@@ -881,7 +884,7 @@ parLapply_wrapper <- function(run_parallel,x,fun,...){
     if(sys_info[[1]] == "Windows"){
       parallel::parLapply(cl = NULL, x, fun, ...)
     } else {
-      parallel::mclapply(x, fun, ..., mc.cores = length(x))
+      parallel::mclapply(x, fun, ..., mc.cores = getOption("mc.cores", 2L))
     }
   } else {
     lapply(x, fun, ...)
