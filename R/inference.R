@@ -69,6 +69,21 @@ scaletuning <- function(step, popt,pcur){
 }
 
 
+#' MCMC proposal function - univariate normal
+#'
+#' Proposal function for MCMC random walk, drawing from normal distribution centered on the current value
+#' @param values a vector of the parameters to be explored
+#' @param sds a vector of standard deviations of the proposal function
+#' @param index numeric value for the index of the parameter to be moved from the param table and vector
+#' @return the parameter vector after step
+#' @export
+univ_proposal_normal <- function(values, sds, index){
+    rtn <- values
+    rtn[index] <- rnorm(1, values[index], sds[index])
+    rtn
+}
+
+
 #' Protect function
 #'
 #' Wrapper function to protect calls to the posterior function. If posterior does not compute correctly, returns -100000.
