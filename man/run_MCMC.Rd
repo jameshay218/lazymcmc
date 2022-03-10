@@ -4,9 +4,18 @@
 \alias{run_MCMC}
 \title{Adaptive Metropolis-within-Gibbs Random Walk Algorithm.}
 \usage{
-run_MCMC(parTab, data = NULL, mcmcPars, filename,
-  CREATE_POSTERIOR_FUNC = NULL, mvrPars = NULL, PRIOR_FUNC = NULL,
-  OPT_TUNING = 0.2, seed, ...)
+run_MCMC(
+  parTab,
+  data = NULL,
+  mcmcPars,
+  filename,
+  CREATE_POSTERIOR_FUNC = NULL,
+  mvrPars = NULL,
+  PRIOR_FUNC = NULL,
+  OPT_TUNING = 0.2,
+  seed,
+  ...
+)
 }
 \arguments{
 \item{parTab}{the parameter table controlling information such as bounds, initial values etc}

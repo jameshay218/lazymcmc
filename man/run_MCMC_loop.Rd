@@ -4,8 +4,17 @@
 \alias{run_MCMC_loop}
 \title{Wrapper to run multiple parallel MCMC chains until convergence}
 \usage{
-run_MCMC_loop(startTab, data, mcmcPars, filenames, CREATE_POSTERIOR_FUNC,
-  mvrPars, PRIOR_FUNC, seed, run_parallel = FALSE)
+run_MCMC_loop(
+  startTab,
+  data,
+  mcmcPars,
+  filenames,
+  CREATE_POSTERIOR_FUNC,
+  mvrPars,
+  PRIOR_FUNC,
+  seed,
+  run_parallel = FALSE
+)
 }
 \arguments{
 \item{startTab}{the parameter table controlling information 
