@@ -298,10 +298,18 @@ run_MCMC <- function(parTab,
 
   make_mcmc_list <- function(start_pars) {
     posterior_out <- posterior_simp(start_pars)
+    
+    if(is.atomic(posterior_out)){
+      probab <- posterior_out
+      misc <- numeric()
+    } else {
+      probab <- posterior_out$lik
+      misc <- unname(posterior_out$misc)
+    }
     list("par_i" = par_i,
          "current_pars" = start_pars,
-         "misc" = posterior_out$misc,
-         "probab" = posterior_out$lik,
+         "misc" = misc, 
+         "probab" = probab, 
          "tempaccepted" = tempaccepted,
          "tempiter" = tempiter)
   }
