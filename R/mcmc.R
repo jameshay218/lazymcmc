@@ -21,7 +21,7 @@ run_MCMC <- function(parTab,
                      OPT_TUNING=0.2,
                      seed,
                      ...){
-browser()
+
   ## check that input parameters are correctly formatted
   parallel_tempering_flag <- is.list(parTab[[1]])
 
@@ -540,7 +540,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
                           mvrPars, PRIOR_FUNC, seed, run_parallel = FALSE){
 
   n_replicates <- length(filenames)
-  browser()
+  
   if(n_replicates > 1 && !is.null(names(mcmcPars))) {
     mcmcPars <- rep(list(mcmcPars), n_replicates)
   }
@@ -567,7 +567,7 @@ run_MCMC_loop <- function(startTab, data, mcmcPars, filenames,
   startTab_current <- startTab
   total_iterations <- 0
   filenames_current <- filenames
-  browser()
+  
   if(!("max_total_iterations" %in% names(mcmcPars[[1]]))){
     mcmcPars <- lapply(mcmcPars, function(x) c(x, "max_total_iterations" = x[["iterations"]]))
   }
