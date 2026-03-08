@@ -26,7 +26,7 @@ calculate_WAIC <- function(chain, parTab, dat, f){
     expectation_posterior <- 0
     tmp <- matrix(nrow=chain,ncol=nrow(dat)*ncol(dat))
     for(i in 1:nrow(chain)){
-        pars <- zikaProj::get_index_pars(chain,i)
+        pars <- get_index_pars(chain,chain$sampno[i])
         y <- f(pars)
         index <- 1
         for(j in 1:nrow(dat)){
